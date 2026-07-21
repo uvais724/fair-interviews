@@ -1,7 +1,9 @@
-import Image from "next/image";
+import { InterviewCapture } from "@/components/interviews/InterviewCapture";
 
 export default function Home() {
   return (
-    <div>Fair Interviews</div>
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <InterviewCapture />
+    </div>
   );
 }

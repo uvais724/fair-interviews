@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum InterviewStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum InterviewVerdict {
+  SELECT
+  REJECT
+  HOLD
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  questionKits QuestionKit[]
+  interviews  Interview[]
+
+  @@map("users")
+}
+
+model QuestionKit {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions Question[]
+  interviews Interview[]
+
+  @@index([userId])
+  @@map("question_kits")
+}
+
+model Question {
+  id                 String   @id @default(cuid())
+  kitId              String   @map("kit_id")
+  text               String
+  orderIndex         Int      @map("order_index")
+  defaultTimeSeconds Int      @map("default_time_seconds")
+  tag                String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  kit QuestionKit @relation(fields: [kitId], references: [id], onDelete: Cascade)
+
+  @@index([kitId])
+  @@unique([kitId, orderIndex])
+  @@map("questions")
+}
+
+model Interview {
+  id               String             @id @default(cuid())
+  userId           String             @map("user_id")
+  candidateName    String             @map("candidate_name")
+  candidateRole    String             @map("candidate_role")
+  kitId            String?            @map("kit_id")
+
+  status           InterviewStatus    @default(DRAFT)
+
+  overallRating    Int?               @map("overall_rating")
+  overallVerdict   InterviewVerdict?  @map("overall_verdict")
+  overallComments  String?            @map("overall_comments")
+
+  interviewDate    DateTime           @map("interview_date")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kit              QuestionKit?       @relation(fields: [kitId], references: [id], onDelete: SetNull)
+
+  questions        InterviewQuestion[]
+
+  @@index([userId])
+  @@index([kitId])
+  @@index([status])
+  @@map("interviews")
+}
+
+model InterviewQuestion {
+  id                     String   @id @default(cuid())
+  interviewId            String   @map("interview_id")
+
+  questionText           String   @map("question_text")
+
+  orderIndex             Int      @map("order_index")
+
+  allocatedTimeSeconds   Int      @map("allocated_time_seconds")
+  actualTimeSeconds      Int?     @map("actual_time_seconds")
+
+  rating                 Int?
+  notes                  String?
+
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId])
+  @@unique([interviewId, orderIndex])
+  @@map("interview_questions")
+}

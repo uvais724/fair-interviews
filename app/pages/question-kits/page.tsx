@@ -2,11 +2,7 @@ import KitList from "@/components/kits/KitList";
 import prisma from "@/lib/prisma";
 
 async function getQuestionKits() {
-    const questionKits = await prisma.questionKit.findMany({
-        include: {
-            questions: true,
-        },
-    });
+    const questionKits = await prisma.questionKit.findMany();
 
     return questionKits;
 }

@@ -2,12 +2,9 @@
 
 import type { Prisma } from "@/app/generated/prisma/client";
 import Link from "next/link";
+import { Button } from "../ui/button";
 
-type QuestionKitWithQuestions = Prisma.QuestionKitGetPayload<{
-  include: {
-    questions: true;
-  };
-}>;
+type QuestionKitWithQuestions = Prisma.QuestionKitGetPayload<{}>;
 
 interface KitListProps {
   questionKits: QuestionKitWithQuestions[];
@@ -34,18 +31,13 @@ export default function KitList({ questionKits }: KitListProps) {
                   <span>{kit.description ?? "No description"}</span>
                 </div>
                 <div>
-                  <Link
-                    href={`/pages/question-kits/${kit.id}`}
-                    className="inline-flex rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-                  >
-                    View Questions
-                  </Link>
-                  <button className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600">
-                    Edit
-                  </button>
-                  <button className="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600">
-                    Delete
-                  </button>
+                  <Button variant="link">
+                    <Link
+                      href={`/pages/question-kits/${kit.id}`}
+                    >
+                      View Questions
+                    </Link>
+                  </Button>
                 </div>
               </li>
             ))}

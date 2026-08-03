@@ -15,9 +15,11 @@ export default function KitList({ questionKits }: KitListProps) {
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <h1>Question Kits</h1>
       <div className="flex flex-col gap-4">
-        <button className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
-          Create New Question Kit
-        </button>
+        <Button>
+          <Link href="/pages/question-kits/create">
+            Create New Question Kit
+          </Link>
+        </Button>
         <div className="flex flex-col gap-2">
           <h2>Existing Question Kits</h2>
           <ul className="flex flex-col gap-2">

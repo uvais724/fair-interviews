@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import React from 'react'
 
+import {
+  KitQuestionEditor,
+  type QuestionActionState,
+} from "@/components/kits/KitQuestionEditor"
+
 interface KitDetailsProps {
   questionKit: {
     id: string;
@@ -15,9 +20,21 @@ interface KitDetailsProps {
       orderIndex: number;
     }[];
   };
+  updateQuestionAction: (
+    state: QuestionActionState,
+    formData: FormData
+  ) => Promise<QuestionActionState>;
+  deleteQuestionAction: (
+    state: QuestionActionState,
+    formData: FormData
+  ) => Promise<QuestionActionState>;
 }
 
-export default function KitDetails({ questionKit }: KitDetailsProps) {
+export default function KitDetails({
+  questionKit,
+  updateQuestionAction,
+  deleteQuestionAction,
+}: KitDetailsProps) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-6">
       <Link
@@ -45,20 +62,13 @@ export default function KitDetails({ questionKit }: KitDetailsProps) {
         {questionKit.questions.length > 0 ? (
           <ol className="flex flex-col gap-3">
             {questionKit.questions.map((question) => (
-              <li key={question.id} className="rounded border p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-500">
-                      Question {question.orderIndex}
-                    </span>
-                    <p>{question.text}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1 text-sm text-gray-600">
-                    {question.tag && <span>{question.tag}</span>}
-                    <span>{question.defaultTimeSeconds} seconds</span>
-                  </div>
-                </div>
-              </li>
+              <KitQuestionEditor
+                key={question.id}
+                question={question}
+                canDelete={questionKit.questions.length > 1}
+                updateQuestionAction={updateQuestionAction}
+                deleteQuestionAction={deleteQuestionAction}
+              />
             ))}
           </ol>
         ) : (

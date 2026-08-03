@@ -1,24 +1,30 @@
 import { KitForm } from '@/components/kits/KitForm'
 import prisma from '@/lib/prisma';
+import { kitInputSchema } from '@/lib/question-kit-validation';
 
 export async function createQuestionKit(data: FormData) {
     'use server'
 
-    const title = data.get('title')?.toString() ?? ''
-    const description = data.get('description')?.toString() ?? ''
     const rawQuestions = data.get('questions')?.toString() ?? '[]'
+    let questions: unknown
 
-    const questions = JSON.parse(rawQuestions) as Array<{
-        text: string
-        default_time_seconds: number
-        tag: string
-    }>
+    try {
+        questions = JSON.parse(rawQuestions)
+    } catch {
+        throw new Error('Questions must be valid JSON.')
+    }
 
-    console.log('Creating question kit with data:', {
-        title,
-        description,
+    const validatedFields = kitInputSchema.safeParse({
+        title: data.get('title')?.toString() ?? '',
+        description: data.get('description')?.toString() ?? '',
         questions,
     })
+
+    if (!validatedFields.success) {
+        throw new Error('Question kit data is invalid.')
+    }
+
+    const { title, description, questions: validatedQuestions } = validatedFields.data
 
     const user = await prisma.user.findFirst()
 
@@ -32,7 +38,7 @@ export async function createQuestionKit(data: FormData) {
             title,
             description: description || null,
             questions: {
-                create: questions.map((question, index) => ({
+                create: validatedQuestions.map((question, index) => ({
                     text: question.text,
                     orderIndex: index + 1,
                     defaultTimeSeconds: question.default_time_seconds,

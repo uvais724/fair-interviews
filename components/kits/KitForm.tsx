@@ -28,41 +28,8 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
-import { startTransition, useTransition } from "react"
-
-const formSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(3, "Kit title must be at least 3 characters.")
-    .max(80, "Kit title must be at most 80 characters."),
-  description: z
-    .string()
-    .trim()
-    .min(10, "Description must be at least 10 characters.")
-    .max(240, "Description must be at most 240 characters."),
-  questions: z
-    .array(
-      z.object({
-        text: z
-          .string()
-          .trim()
-          .min(10, "Question must be at least 10 characters.")
-          .max(240, "Question must be at most 240 characters."),
-        default_time_seconds: z.coerce
-          .number<number>()
-          .int("Time must be a whole number of seconds.")
-          .min(60, "Time must be at least 60 seconds.")
-          .max(7200, "Time must be at most 7200 seconds."),
-        tag: z
-          .string()
-          .trim()
-          .min(2, "Tag must be at least 2 characters.")
-          .max(40, "Tag must be at most 40 characters."),
-      })
-    )
-    .min(1, "Add at least one question."),
-})
+import { useTransition } from "react"
+import { kitInputSchema } from "@/lib/question-kit-validation"
 
 type KitFormProps = {
   action: (formData: FormData) => Promise<void>
@@ -71,8 +38,8 @@ type KitFormProps = {
 export function KitForm({ action }: KitFormProps) {
   const [isPending, startTransition] = useTransition()
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof kitInputSchema>>({
+    resolver: zodResolver(kitInputSchema),
     defaultValues: {
       title: "",
       description: "",
@@ -91,7 +58,7 @@ export function KitForm({ action }: KitFormProps) {
     name: "questions",
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  function onSubmit(data: z.infer<typeof kitInputSchema>) {
     const formData = new FormData()
 
     formData.set("title", data.title)

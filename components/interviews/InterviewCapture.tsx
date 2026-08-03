@@ -6,8 +6,7 @@ import { Play, RotateCcw, Send } from "lucide-react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import * as z from "zod"
 
-import kits from "@/mocks/question-kits.json"
-import questions from "@/mocks/questions.json"
+import { getQuestions } from "@/app/actions/getQuestions"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -31,9 +30,6 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
-
-type Kit = (typeof kits)[number]
-type KitQuestion = (typeof questions)[number]
 
 const startSchema = z.object({
   candidate_name: z
@@ -99,6 +95,20 @@ const verdicts = [
   { value: "reject", label: "Reject" },
 ] as const
 
+type Kit = {
+  id: string
+  title: string
+  description?: string | null
+}
+
+type KitQuestion = {
+  id: string
+  kit_id: string
+  text: string
+  order_index: number
+  default_time_seconds: number
+}
+
 function getLocalDateTimeValue() {
   const now = new Date()
   const offsetMs = now.getTimezoneOffset() * 60 * 1000
@@ -106,8 +116,8 @@ function getLocalDateTimeValue() {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16)
 }
 
-function getKitQuestions(kitId: string) {
-  return questions
+function getKitQuestions(kitId: string, availableQuestions: KitQuestion[]) {
+  return availableQuestions
     .filter((question) => question.kit_id === kitId)
     .sort((first, second) => first.order_index - second.order_index)
 }
@@ -129,6 +139,41 @@ function SelectField({
 export function InterviewCapture() {
   const [startedInterview, setStartedInterview] =
     React.useState<StartFormValues | null>(null)
+  const [availableKits, setAvailableKits] = React.useState<Kit[]>([])
+  const [availableQuestions, setAvailableQuestions] = React.useState<KitQuestion[]>([])
+  const [isLoadingQuestions, setIsLoadingQuestions] = React.useState(true)
+
+  React.useEffect(() => {
+    let active = true
+
+    async function loadQuestions() {
+      try {
+        const data = await getQuestions()
+
+        if (active) {
+          setAvailableKits(data.kits)
+          setAvailableQuestions(data.questions)
+        }
+      } catch (error) {
+        console.error("Failed to load question kits", error)
+
+        if (active) {
+          setAvailableKits([])
+          setAvailableQuestions([])
+        }
+      } finally {
+        if (active) {
+          setIsLoadingQuestions(false)
+        }
+      }
+    }
+
+    void loadQuestions()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const startForm = useForm<StartFormValues>({
     resolver: zodResolver(startSchema),
@@ -158,11 +203,11 @@ export function InterviewCapture() {
     control: captureForm.control,
     name: "questions",
   })
-  const selectedKit = kits.find((kit) => kit.id === selectedKitId)
-  const selectedQuestions = getKitQuestions(selectedKitId)
+  const selectedKit = availableKits.find((kit) => kit.id === selectedKitId)
+  const selectedQuestions = getKitQuestions(selectedKitId ?? "", availableQuestions)
 
   function startInterview(data: StartFormValues) {
-    const kitQuestions = getKitQuestions(data.kit_id)
+    const kitQuestions = getKitQuestions(data.kit_id, availableQuestions)
 
     captureForm.reset({
       questions: kitQuestions.map((question) => ({
@@ -194,7 +239,9 @@ export function InterviewCapture() {
     const now = new Date().toISOString()
     const idStamp = now.replace(/\D/g, "")
     const interviewId = `int_${idStamp}`
-    const selectedKit = kits.find((kit) => kit.id === startedInterview.kit_id)
+    const selectedKit = availableKits.find(
+      (kit) => kit.id === startedInterview.kit_id
+    )
     const payload = {
       interview: {
         id: interviewId,
@@ -228,8 +275,18 @@ export function InterviewCapture() {
     console.log("Interview Captured:", payload)
   }
 
+  if (isLoadingQuestions) {
+    return (
+      <Card className="w-full sm:max-w-5xl">
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          Loading question kits...
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (startedInterview) {
-    const activeKit = kits.find((kit) => kit.id === startedInterview.kit_id)
+    const activeKit = availableKits.find((kit) => kit.id === startedInterview.kit_id)
 
     return (
       <Card className="w-full sm:max-w-5xl">
@@ -552,7 +609,7 @@ export function InterviewCapture() {
                       aria-invalid={fieldState.invalid}
                     >
                       <option value="">Select a kit</option>
-                      {kits.map((kit: Kit) => (
+                      {availableKits.map((kit: Kit) => (
                         <option key={kit.id} value={kit.id}>
                           {kit.title}
                         </option>

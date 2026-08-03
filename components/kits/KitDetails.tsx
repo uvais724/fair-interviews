@@ -2,6 +2,10 @@ import Link from 'next/link'
 import React from 'react'
 
 import {
+  KitHeaderEditor,
+  type KitActionState,
+} from "@/components/kits/KitHeaderEditor"
+import {
   KitQuestionEditor,
   type QuestionActionState,
 } from "@/components/kits/KitQuestionEditor"
@@ -28,12 +32,22 @@ interface KitDetailsProps {
     state: QuestionActionState,
     formData: FormData
   ) => Promise<QuestionActionState>;
+  updateKitAction: (
+    state: KitActionState,
+    formData: FormData
+  ) => Promise<KitActionState>;
+  deleteKitAction: (
+    state: KitActionState,
+    formData: FormData
+  ) => Promise<KitActionState>;
 }
 
 export default function KitDetails({
   questionKit,
   updateQuestionAction,
   deleteQuestionAction,
+  updateKitAction,
+  deleteKitAction,
 }: KitDetailsProps) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-6">
@@ -44,18 +58,11 @@ export default function KitDetails({
         Back to Question Kits
       </Link>
 
-      <section className="flex flex-col gap-3 rounded border p-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">{questionKit.title}</h1>
-          <p className="text-gray-600">
-            {questionKit.description ?? "No description"}
-          </p>
-        </div>
-        <div className="flex gap-4 text-sm text-gray-600">
-          <span>{questionKit.questions.length} questions</span>
-          <span>Created {questionKit.createdAt.toLocaleDateString()}</span>
-        </div>
-      </section>
+      <KitHeaderEditor
+        questionKit={questionKit}
+        updateKitAction={updateKitAction}
+        deleteKitAction={deleteKitAction}
+      />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">Questions</h2>

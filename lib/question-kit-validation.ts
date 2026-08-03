@@ -18,7 +18,7 @@ export const questionInputSchema = z.object({
     .max(40, "Tag must be at most 40 characters."),
 })
 
-export const kitInputSchema = z.object({
+export const kitDetailsInputSchema = z.object({
   title: z
     .string()
     .trim()
@@ -29,8 +29,12 @@ export const kitInputSchema = z.object({
     .trim()
     .min(10, "Description must be at least 10 characters.")
     .max(240, "Description must be at most 240 characters."),
+})
+
+export const kitInputSchema = kitDetailsInputSchema.extend({
   questions: z.array(questionInputSchema).min(1, "Add at least one question."),
 })
 
 export type KitInput = z.infer<typeof kitInputSchema>
+export type KitDetailsInput = z.infer<typeof kitDetailsInputSchema>
 export type QuestionInput = z.infer<typeof questionInputSchema>

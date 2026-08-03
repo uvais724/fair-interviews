@@ -1,9 +1,13 @@
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import prisma from "@/lib/prisma";
-import { questionInputSchema } from "@/lib/question-kit-validation";
+import {
+  kitDetailsInputSchema,
+  questionInputSchema,
+} from "@/lib/question-kit-validation";
 import KitDetails from "@/components/kits/KitDetails";
+import type { KitActionState } from "@/components/kits/KitHeaderEditor";
 import type { QuestionActionState } from "@/components/kits/KitQuestionEditor";
 
 async function getQuestionKit(id: string) {
@@ -29,6 +33,99 @@ export default async function QuestionKitDetailsPage({
 
   if (!questionKit) {
     notFound();
+  }
+
+  async function updateKit(
+    _state: KitActionState,
+    formData: FormData
+  ): Promise<KitActionState> {
+    "use server";
+
+    const kitId = formData.get("kit_id")?.toString() ?? "";
+
+    if (kitId !== id) {
+      return {
+        success: false,
+        errors: {
+          form: ["Question kit was not found."],
+        },
+      };
+    }
+
+    const validatedFields = kitDetailsInputSchema.safeParse({
+      title: formData.get("title")?.toString() ?? "",
+      description: formData.get("description")?.toString() ?? "",
+    });
+
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        errors: validatedFields.error.flatten().fieldErrors,
+      };
+    }
+
+    const updatedKit = await prisma.questionKit.updateMany({
+      where: {
+        id,
+      },
+      data: {
+        title: validatedFields.data.title,
+        description: validatedFields.data.description,
+      },
+    });
+
+    if (updatedKit.count === 0) {
+      return {
+        success: false,
+        errors: {
+          form: ["Question kit was not found."],
+        },
+      };
+    }
+
+    revalidatePath("/pages/question-kits");
+    revalidatePath(`/pages/question-kits/${id}`);
+
+    return {
+      success: true,
+      message: "Question kit updated.",
+    };
+  }
+
+  async function deleteKit(
+    _state: KitActionState,
+    formData: FormData
+  ): Promise<KitActionState> {
+    "use server";
+
+    const kitId = formData.get("kit_id")?.toString() ?? "";
+
+    if (kitId !== id) {
+      return {
+        success: false,
+        errors: {
+          form: ["Question kit was not found."],
+        },
+      };
+    }
+
+    const deletedKit = await prisma.questionKit.deleteMany({
+      where: {
+        id,
+      },
+    });
+
+    if (deletedKit.count === 0) {
+      return {
+        success: false,
+        errors: {
+          form: ["Question kit was not found."],
+        },
+      };
+    }
+
+    revalidatePath("/pages/question-kits");
+    redirect("/pages/question-kits");
   }
 
   async function updateQuestion(
@@ -155,6 +252,8 @@ export default async function QuestionKitDetailsPage({
   return (
     <KitDetails
       questionKit={questionKit}
+      updateKitAction={updateKit}
+      deleteKitAction={deleteKit}
       updateQuestionAction={updateQuestion}
       deleteQuestionAction={deleteQuestion}
     />

@@ -30,60 +30,19 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
+import { interviewCaptureSchema } from "@/lib/interview-validation"
 
-const startSchema = z.object({
-  candidate_name: z
-    .string()
-    .trim()
-    .min(2, "Candidate name must be at least 2 characters.")
-    .max(80, "Candidate name must be at most 80 characters."),
-  candidate_title: z
-    .string()
-    .trim()
-    .min(2, "Candidate title must be at least 2 characters.")
-    .max(80, "Candidate title must be at most 80 characters."),
-  interview_date: z.string().min(1, "Choose the interview date and time."),
-  kit_id: z.string().min(1, "Choose a question kit."),
+const startSchema = interviewCaptureSchema.pick({
+  candidate_name: true,
+  candidate_role: true,
+  interview_date: true,
+  kit_id: true,
 })
-
-const captureSchema = z.object({
-  questions: z
-    .array(
-      z.object({
-        question_id: z.string(),
-        question_text: z.string(),
-        order_index: z.number(),
-        allocated_time_seconds: z.number(),
-        actual_time_seconds: z.coerce
-          .number<number>()
-          .int("Actual time must be a whole number of seconds.")
-          .min(0, "Actual time cannot be negative.")
-          .max(7200, "Actual time must be at most 7200 seconds."),
-        rating: z.coerce
-          .number<number>()
-          .int("Rating must be a whole number.")
-          .min(1, "Rating must be at least 1.")
-          .max(5, "Rating must be at most 5."),
-        notes: z
-          .string()
-          .trim()
-          .max(500, "Notes must be at most 500 characters."),
-      })
-    )
-    .min(1, "The selected kit needs at least one question."),
-  overall_rating: z.coerce
-    .number<number>()
-    .int("Overall rating must be a whole number.")
-    .min(1, "Overall rating must be at least 1.")
-    .max(5, "Overall rating must be at most 5."),
-  overall_verdict: z.enum(["select", "hold", "reject"], {
-    error: "Choose an overall verdict.",
-  }),
-  overall_comments: z
-    .string()
-    .trim()
-    .min(10, "Overall feedback must be at least 10 characters.")
-    .max(1000, "Overall feedback must be at most 1000 characters."),
+const captureSchema = interviewCaptureSchema.pick({
+  questions: true,
+  overall_rating: true,
+  overall_verdict: true,
+  overall_comments: true,
 })
 
 type StartFormValues = z.infer<typeof startSchema>
@@ -136,7 +95,12 @@ function SelectField({
   )
 }
 
-export function InterviewCapture() {
+type InterviewCaptureProps = {
+  action: (formData: FormData) => Promise<void>
+}
+
+export function InterviewCapture({ action }: InterviewCaptureProps) {
+  const [isPending, startTransition] = React.useTransition()
   const [startedInterview, setStartedInterview] =
     React.useState<StartFormValues | null>(null)
   const [availableKits, setAvailableKits] = React.useState<Kit[]>([])
@@ -179,7 +143,7 @@ export function InterviewCapture() {
     resolver: zodResolver(startSchema),
     defaultValues: {
       candidate_name: "",
-      candidate_title: "",
+      candidate_role: "",
       interview_date: getLocalDateTimeValue(),
       kit_id: "",
     },
@@ -236,43 +200,19 @@ export function InterviewCapture() {
       return
     }
 
-    const now = new Date().toISOString()
-    const idStamp = now.replace(/\D/g, "")
-    const interviewId = `int_${idStamp}`
-    const selectedKit = availableKits.find(
-      (kit) => kit.id === startedInterview.kit_id
-    )
-    const payload = {
-      interview: {
-        id: interviewId,
-        user_id: "usr_1",
-        candidate_name: startedInterview.candidate_name,
-        candidate_role: startedInterview.candidate_title,
-        kit_id: startedInterview.kit_id,
-        kit_title: selectedKit?.title ?? null,
-        status: "completed",
-        overall_rating: data.overall_rating,
-        overall_verdict: data.overall_verdict,
-        overall_comments: data.overall_comments,
-        interview_date: new Date(startedInterview.interview_date).toISOString(),
-        created_at: now,
-        updated_at: now,
-      },
-      questions: data.questions.map((question, index) => ({
-        id: `iq_${idStamp}_${index + 1}`,
-        interview_id: interviewId,
-        question_id: question.question_id,
-        question_text: question.question_text,
-        order_index: question.order_index,
-        allocated_time_seconds: question.allocated_time_seconds,
-        actual_time_seconds: question.actual_time_seconds,
-        rating: question.rating,
-        notes: question.notes,
-        created_at: now,
-      })),
-    }
+    const formData = new FormData()
+    formData.set("candidate_name", startedInterview.candidate_name)
+    formData.set("candidate_role", startedInterview.candidate_role)
+    formData.set("interview_date", startedInterview.interview_date)
+    formData.set("kit_id", startedInterview.kit_id)
+    formData.set("overall_rating", data.overall_rating.toString())
+    formData.set("overall_verdict", data.overall_verdict)
+    formData.set("overall_comments", data.overall_comments)
+    formData.set("questions", JSON.stringify(data.questions))
 
-    console.log("Interview Captured:", payload)
+    startTransition(() => {
+      void action(formData)
+    })
   }
 
   if (isLoadingQuestions) {
@@ -294,7 +234,7 @@ export function InterviewCapture() {
           <CardTitle>Capture Interview</CardTitle>
           <CardDescription>
             {startedInterview.candidate_name} for{" "}
-            {startedInterview.candidate_title}
+            {startedInterview.candidate_role}
             {activeKit ? ` using ${activeKit.title}` : ""}
           </CardDescription>
         </CardHeader>
@@ -509,9 +449,9 @@ export function InterviewCapture() {
             <RotateCcw />
             Start Over
           </Button>
-          <Button type="submit" form="interview-capture-form">
+          <Button type="submit" form="interview-capture-form" disabled={isPending}>
             <Send />
-            Log Interview
+            {isPending ? "Logging..." : "Log Interview"}
           </Button>
         </CardFooter>
       </Card>
@@ -555,12 +495,12 @@ export function InterviewCapture() {
                 )}
               />
               <Controller
-                name="candidate_title"
+                name="candidate_role"
                 control={startForm.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="interview-candidate-title">
-                      Candidate Title
+                      Candidate Role
                     </FieldLabel>
                     <Input
                       {...field}

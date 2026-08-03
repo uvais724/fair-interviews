@@ -1,10 +1,20 @@
-import { InterviewCapture } from '@/components/interviews/InterviewCapture'
-import React from 'react'
+import InterviewList from "@/components/interviews/InterviewList"
+import prisma from "@/lib/prisma"
 
-export default function page() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <InterviewCapture />
-    </div>
-  )
+async function getInterviews() {
+  return prisma.interview.findMany({
+    orderBy: {
+      interviewDate: "desc",
+    },
+    include: {
+      kit: true,
+      questions: true,
+    },
+  })
+}
+
+export default async function InterviewsPage() {
+  const interviews = await getInterviews()
+
+  return <InterviewList interviews={interviews} />
 }

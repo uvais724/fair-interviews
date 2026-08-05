@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, Save, Trash2, X } from "lucide-react"
+import { Download, Pencil, Save, Trash2, X } from "lucide-react"
 import Link from "next/link"
 import { useActionState, useState } from "react"
 
@@ -320,6 +320,8 @@ export default function InterviewDetails({
     initialInterviewState
   )
 
+  console.log("interview", interview)
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-6">
       <Link
@@ -505,6 +507,14 @@ export default function InterviewDetails({
                 >
                   <Pencil />
                 </Button>
+                <Link
+                  href={`/pages/interviews/${interview.id}/export`}
+                  className={buttonVariants({ variant: "outline", size: "icon-sm" })}
+                  aria-label="Export interview"
+                  title="Export interview"
+                >
+                  <Download />
+                </Link>
                 <AlertDialog>
                   <AlertDialogTrigger
                     className={buttonVariants({

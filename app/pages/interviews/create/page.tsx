@@ -94,6 +94,7 @@ export async function createInterview(data: FormData) {
         create: kit.questions.map((kitQuestion) => ({
           questionText: kitQuestion.text,
           orderIndex: kitQuestion.orderIndex,
+          tag: kitQuestion.tag,
           allocatedTimeSeconds: kitQuestion.defaultTimeSeconds,
           actualTimeSeconds:
             answersByQuestionId.get(kitQuestion.id)?.actual_time_seconds,

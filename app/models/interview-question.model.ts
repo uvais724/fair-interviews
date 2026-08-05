@@ -4,6 +4,8 @@ export class InterviewQuestion {
   id!: string;
   interviewId!: string;
 
+  tag?: string;
+
   questionText!: string;
 
   orderIndex!: number;

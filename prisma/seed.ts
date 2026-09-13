@@ -13,6 +13,7 @@ const prisma = new PrismaClient({
 type SeedInterviewQuestionInput = {
   questionText: string;
   orderIndex: number;
+  tag?: string;
   allocatedTimeSeconds: number;
   actualTimeSeconds?: number;
   rating?: number;

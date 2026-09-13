@@ -58,7 +58,7 @@ model Question {
   text               String
   orderIndex         Int      @map("order_index")
   defaultTimeSeconds Int      @map("default_time_seconds")
-  tag                String?
+  tag                String?  @map("tag")
   createdAt          DateTime @default(now()) @map("created_at")
 
   kit QuestionKit @relation(fields: [kitId], references: [id], onDelete: Cascade)

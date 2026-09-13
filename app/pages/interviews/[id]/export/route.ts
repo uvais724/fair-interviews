@@ -71,17 +71,15 @@ export async function GET(
     return new Response("Interview was not found.", { status: 404 })
   }
 
-  const verdictRow = interview.questions.length + 13
-  const commentsRow = verdictRow + 1
+  const verdictRow = interview.questions.length + 11
   const sheet: Worksheet = {
     name: "Interview Report",
-    columns: [8, 18, 48, 18, 18, 14, 36],
+    columns: [24.62, 43.67, 31.16, 17.24, 18.22, 23.93, 39.51],
     merges: [
       "A1:G1",
       "A3:G3",
       "A8:G8",
       `A${verdictRow}:G${verdictRow}`,
-      `B${commentsRow}:G${commentsRow}`,
     ],
     rows: [
       [{ value: "Interview Evaluation Report", style: "title" }, "", "", "", "", "", ""],
@@ -125,32 +123,33 @@ export async function GET(
         { value: displayValue(question.notes), style: "tableCell" },
       ]),
       [],
-      [{ value: "Final Verdict", style: "section" }, "", "", "", "", ""],
+      [
+        { value: "Final Verdict", style: "verdictSection" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
       [
         { value: "Overall Rating", style: "verdictLabel" },
         {
           value: interview.overallRating ? `${interview.overallRating}/5` : "",
           style: "verdictValue",
         },
+      ],
+      [
         { value: "Verdict", style: "verdictLabel" },
-        { value: titleCase(interview.overallVerdict), style: "verdictValue" },
+        { value: titleCase(interview.overallVerdict), style: "verdictSelect" },
+      ],
+      [
         { value: "Updated", style: "verdictLabel" },
         { value: formatDate(interview.updatedAt), style: "verdictValue" },
       ],
       [
         { value: "Overall Comments", style: "verdictLabel" },
-        { value: displayValue(interview.overallComments), style: "verdictValue" },
-        "",
-        "",
-        "",
-        "",
-      ],
-      [],
-      [
-        {
-          value: "Generated from Fair Interviews. Share with HR after reviewing candidate notes and verdict.",
-          style: "muted",
-        },
+        { value: displayValue(interview.overallComments), style: "verdictComments" },
       ],
     ],
   }

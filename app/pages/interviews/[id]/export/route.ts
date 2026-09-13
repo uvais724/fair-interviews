@@ -156,12 +156,13 @@ export async function GET(
 
   const workbook = createXlsxWorkbook([sheet])
   const candidate = safeFilePart(interview.candidateName) || "candidate"
+  const timestamp = new Date().toISOString().split("T")[0]
 
   return new Response(workbook, {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="interview-report-${candidate}.xlsx"`,
+      "Content-Disposition": `attachment; filename="interview-report-${candidate}-${timestamp}.xlsx"`,
       "Cache-Control": "no-store",
     },
   })

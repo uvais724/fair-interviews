@@ -1,5 +1,6 @@
 "use client"
 
+import { secondsToMinutes } from "@/lib/utils"
 import { Pencil, Save, Trash2, X } from "lucide-react"
 import { useActionState, useState } from "react"
 
@@ -86,7 +87,7 @@ export function KitQuestionEditor({
           <div className="flex shrink-0 flex-col gap-3 sm:items-end">
             <div className="flex flex-col gap-1 text-sm text-gray-600 sm:items-end">
               {question.tag && <span>{question.tag}</span>}
-              <span>{question.defaultTimeSeconds} seconds</span>
+              <span>{secondsToMinutes(question.defaultTimeSeconds)} min</span>
             </div>
             <div className="flex gap-2">
               <Button
@@ -124,7 +125,11 @@ export function KitQuestionEditor({
 
   return (
     <li className="rounded border p-4">
-      <form action={updateFormAction} className="flex flex-col gap-4">
+      <form
+        key={`${question.id}-${question.text}-${question.tag ?? ""}-${question.defaultTimeSeconds}`}
+        action={updateFormAction}
+        className="flex flex-col gap-4"
+      >
         <input type="hidden" name="question_id" value={question.id} />
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-medium text-gray-500">
@@ -189,26 +194,26 @@ export function KitQuestionEditor({
             </Field>
             <Field data-invalid={!!updateState.errors?.default_time_seconds}>
               <FieldLabel htmlFor={`question-${question.id}-time`}>
-                Default Time
+                Default Time (minutes)
               </FieldLabel>
               <InputGroup>
                 <Input
                   id={`question-${question.id}-time`}
                   name="default_time_seconds"
                   type="number"
-                  min={60}
-                  max={7200}
-                  step={60}
-                  defaultValue={question.defaultTimeSeconds}
+                  min={1}
+                  max={120}
+                  step={1}
+                  defaultValue={secondsToMinutes(question.defaultTimeSeconds)}
                   aria-invalid={!!updateState.errors?.default_time_seconds}
                   required
                 />
                 <InputGroupAddon align="inline-end">
-                  <InputGroupText>seconds</InputGroupText>
+                  <InputGroupText>minutes</InputGroupText>
                 </InputGroupAddon>
               </InputGroup>
               <FieldDescription>
-                Use values like 600 or 900 seconds.
+                Use values like 10 or 15 minutes.
               </FieldDescription>
               <FieldError
                 errors={fieldErrors(updateState.errors?.default_time_seconds)}

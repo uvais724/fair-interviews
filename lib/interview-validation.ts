@@ -9,7 +9,7 @@ export const interviewQuestionCaptureSchema = z.object({
     .number<number>()
     .int("Actual time must be a whole number of seconds.")
     .min(0, "Actual time cannot be negative.")
-    .max(7200, "Actual time must be at most 7200 seconds."),
+    .max(7200, "Actual time must be at most 120 minutes."),
   rating: z.coerce
     .number<number>()
     .int("Rating must be a whole number.")

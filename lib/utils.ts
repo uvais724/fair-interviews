@@ -6,5 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function minutesToSeconds(minutes: number) {
-  return minutes * 60
+  return Math.round(minutes * 60)
+}
+
+export function secondsToMinutes(seconds: number) {
+  return Math.round((seconds / 60) * 10) / 10
 }

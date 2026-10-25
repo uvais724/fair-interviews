@@ -1,6 +1,7 @@
 import { KitForm } from '@/components/kits/KitForm'
 import prisma from '@/lib/prisma';
 import { kitInputSchema } from '@/lib/question-kit-validation';
+import { minutesToSeconds } from '@/lib/utils';
 
 export async function createQuestionKit(data: FormData) {
     'use server'
@@ -12,6 +13,25 @@ export async function createQuestionKit(data: FormData) {
         questions = JSON.parse(rawQuestions)
     } catch {
         throw new Error('Questions must be valid JSON.')
+    }
+
+    if (Array.isArray(questions)) {
+        questions = questions.map((question) => {
+            if (!question || typeof question !== 'object') {
+                return question
+            }
+
+            return {
+                ...question,
+                default_time_seconds: minutesToSeconds(
+                    Number(
+                        'default_time_seconds' in question
+                            ? question.default_time_seconds
+                            : ''
+                    )
+                ),
+            }
+        })
     }
 
     const validatedFields = kitInputSchema.safeParse({

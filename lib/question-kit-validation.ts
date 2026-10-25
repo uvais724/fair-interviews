@@ -9,8 +9,8 @@ export const questionInputSchema = z.object({
   default_time_seconds: z.coerce
     .number<number>()
     .int("Time must be a whole number of seconds.")
-    .min(60, "Time must be at least 60 seconds.")
-    .max(7200, "Time must be at most 7200 seconds."),
+    .min(60, "Time must be at least 1 minute.")
+    .max(7200, "Time must be at most 120 minutes."),
   tag: z
     .string()
     .trim()

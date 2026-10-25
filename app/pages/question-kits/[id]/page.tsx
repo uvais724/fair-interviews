@@ -9,6 +9,7 @@ import {
 import KitDetails from "@/components/kits/KitDetails";
 import type { KitActionState } from "@/components/kits/KitHeaderEditor";
 import type { QuestionActionState } from "@/components/kits/KitQuestionEditor";
+import { minutesToSeconds } from "@/lib/utils";
 
 async function getQuestionKit(id: string) {
   return prisma.questionKit.findUnique({
@@ -139,7 +140,9 @@ export default async function QuestionKitDetailsPage({
       text: formData.get("text")?.toString() ?? "",
       tag: formData.get("tag")?.toString() ?? "",
       default_time_seconds:
-        formData.get("default_time_seconds")?.toString() ?? "",
+        minutesToSeconds(
+          Number(formData.get("default_time_seconds")?.toString() ?? "")
+        ),
     });
 
     if (!validatedFields.success) {

@@ -11,6 +11,7 @@ import {
   interviewQuestionInputSchema,
 } from "@/lib/interview-validation"
 import prisma from "@/lib/prisma"
+import { minutesToSeconds } from "@/lib/utils"
 
 async function getInterview(id: string) {
   return prisma.interview.findUnique({
@@ -158,7 +159,9 @@ export default async function InterviewDetailsPage({
     const questionId = formData.get("question_id")?.toString() ?? ""
     const validatedFields = interviewQuestionInputSchema.safeParse({
       actual_time_seconds:
-        formData.get("actual_time_seconds")?.toString() ?? "",
+        minutesToSeconds(
+          Number(formData.get("actual_time_seconds")?.toString() ?? "")
+        ),
       rating: formData.get("rating")?.toString() ?? "",
       notes: formData.get("notes")?.toString() ?? "",
     })

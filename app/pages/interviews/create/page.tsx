@@ -4,6 +4,7 @@ import { InterviewCapture } from "@/components/interviews/InterviewCapture"
 import { InterviewStatus, InterviewVerdict } from "@/app/generated/prisma/client"
 import { interviewCaptureSchema } from "@/lib/interview-validation"
 import prisma from "@/lib/prisma"
+import { minutesToSeconds } from "@/lib/utils"
 
 function toVerdict(value: "select" | "hold" | "reject") {
   const verdicts = {
@@ -25,6 +26,25 @@ export async function createInterview(data: FormData) {
     questions = JSON.parse(rawQuestions)
   } catch {
     throw new Error("Interview questions must be valid JSON.")
+  }
+
+  if (Array.isArray(questions)) {
+    questions = questions.map((question) => {
+      if (!question || typeof question !== "object") {
+        return question
+      }
+
+      return {
+        ...question,
+        actual_time_seconds: minutesToSeconds(
+          Number(
+            "actual_time_seconds" in question
+              ? question.actual_time_seconds
+              : ""
+          )
+        ),
+      }
+    })
   }
 
   const validatedFields = interviewCaptureSchema.safeParse({

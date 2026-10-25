@@ -29,7 +29,20 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { useTransition } from "react"
-import { kitInputSchema } from "@/lib/question-kit-validation"
+import { kitDetailsInputSchema } from "@/lib/question-kit-validation"
+
+const kitFormSchema = kitDetailsInputSchema.extend({
+  questions: z.array(
+    z.object({
+      text: z.string().trim().min(10).max(240),
+      default_time_seconds: z.coerce
+        .number()
+        .min(1, "Time must be at least 1 minute.")
+        .max(120, "Time must be at most 120 minutes."),
+      tag: z.string().trim().min(2).max(40),
+    })
+  ).min(1, "Add at least one question."),
+})
 
 type KitFormProps = {
   action: (formData: FormData) => Promise<void>
@@ -38,15 +51,19 @@ type KitFormProps = {
 export function KitForm({ action }: KitFormProps) {
   const [isPending, startTransition] = useTransition()
   
-  const form = useForm<z.infer<typeof kitInputSchema>>({
-    resolver: zodResolver(kitInputSchema),
+  const form = useForm<
+    z.input<typeof kitFormSchema>,
+    unknown,
+    z.output<typeof kitFormSchema>
+  >({
+    resolver: zodResolver(kitFormSchema),
     defaultValues: {
       title: "",
       description: "",
       questions: [
         {
           text: "",
-          default_time_seconds: 600,
+          default_time_seconds: 10,
           tag: "",
         },
       ],
@@ -58,7 +75,7 @@ export function KitForm({ action }: KitFormProps) {
     name: "questions",
   })
 
-  function onSubmit(data: z.infer<typeof kitInputSchema>) {
+  function onSubmit(data: z.infer<typeof kitFormSchema>) {
     const formData = new FormData()
 
     formData.set("title", data.title)
@@ -148,7 +165,7 @@ export function KitForm({ action }: KitFormProps) {
                     onClick={() =>
                       questions.append({
                         text: "",
-                        default_time_seconds: 600,
+                        default_time_seconds: 10,
                         tag: "",
                       })
                     }
@@ -248,27 +265,28 @@ export function KitForm({ action }: KitFormProps) {
                                 <FieldLabel
                                   htmlFor={`question-kit-question-${index}-time`}
                                 >
-                                  Default Time
+                                  Default Time (minutes)
                                 </FieldLabel>
                                 <InputGroup>
                                   <Input
                                     {...field}
+                                    value={field.value as number | string}
                                     id={`question-kit-question-${index}-time`}
                                     type="number"
-                                    min={60}
-                                    max={7200}
-                                    step={60}
+                                    min={1}
+                                    max={120}
+                                    step={1}
                                     aria-invalid={fieldState.invalid}
                                     onChange={(event) =>
                                       field.onChange(event.target.value)
                                     }
                                   />
                                   <InputGroupAddon align="inline-end">
-                                    <InputGroupText>seconds</InputGroupText>
+                                    <InputGroupText>minutes</InputGroupText>
                                   </InputGroupAddon>
                                 </InputGroup>
                                 <FieldDescription>
-                                  Use values like 600 or 900 seconds.
+                                  Use values like 10 or 15 minutes.
                                 </FieldDescription>
                                 {fieldState.invalid && (
                                   <FieldError errors={[fieldState.error]} />

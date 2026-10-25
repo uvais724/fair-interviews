@@ -31,6 +31,7 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { interviewCaptureSchema } from "@/lib/interview-validation"
+import { secondsToMinutes } from "@/lib/utils"
 
 const startSchema = interviewCaptureSchema.pick({
   candidate_name: true,
@@ -43,10 +44,26 @@ const captureSchema = interviewCaptureSchema.pick({
   overall_rating: true,
   overall_verdict: true,
   overall_comments: true,
+}).extend({
+  questions: z.array(
+    z.object({
+      question_id: z.string().min(1),
+      question_text: z.string().trim().min(1),
+      order_index: z.number().int().min(1),
+      allocated_time_seconds: z.number().int().min(0).max(7200),
+      actual_time_seconds: z.coerce
+        .number()
+        .min(0, "Actual time cannot be negative.")
+        .max(120, "Actual time must be at most 120 minutes."),
+      rating: z.coerce.number().int().min(1).max(5),
+      notes: z.string().trim().max(500),
+    })
+  ).min(1, "The selected kit needs at least one question."),
 })
 
 type StartFormValues = z.infer<typeof startSchema>
-type CaptureFormValues = z.infer<typeof captureSchema>
+type CaptureFormInput = z.input<typeof captureSchema>
+type CaptureFormValues = z.output<typeof captureSchema>
 
 const verdicts = [
   { value: "select", label: "Select" },
@@ -149,7 +166,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
     },
   })
 
-  const captureForm = useForm<CaptureFormValues>({
+  const captureForm = useForm<CaptureFormInput, unknown, CaptureFormValues>({
     resolver: zodResolver(captureSchema),
     defaultValues: {
       questions: [],
@@ -179,7 +196,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
         question_text: question.text,
         order_index: question.order_index,
         allocated_time_seconds: question.default_time_seconds,
-        actual_time_seconds: question.default_time_seconds,
+        actual_time_seconds: secondsToMinutes(question.default_time_seconds),
         rating: 3,
         notes: "",
       })),
@@ -256,7 +273,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {question.allocated_time_seconds}s allocated
+                      {secondsToMinutes(question.allocated_time_seconds)} min allocated
                     </span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-[1fr_1fr]">
@@ -268,23 +285,24 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                           <FieldLabel
                             htmlFor={`interview-question-${index}-time`}
                           >
-                            Actual Time
+                            Actual Time (minutes)
                           </FieldLabel>
                           <InputGroup>
                             <Input
                               {...field}
+                              value={field.value as number | string}
                               id={`interview-question-${index}-time`}
                               type="number"
                               min={0}
-                              max={7200}
-                              step={30}
+                              max={120}
+                              step={0.5}
                               aria-invalid={fieldState.invalid}
                               onChange={(event) =>
                                 field.onChange(event.target.value)
                               }
                             />
                             <InputGroupAddon align="inline-end">
-                              <InputGroupText>seconds</InputGroupText>
+                              <InputGroupText>minutes</InputGroupText>
                             </InputGroupAddon>
                           </InputGroup>
                           {fieldState.invalid && (
@@ -305,6 +323,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                           </FieldLabel>
                           <Input
                             {...field}
+                            value={field.value as number | string}
                             id={`interview-question-${index}-rating`}
                             type="number"
                             min={1}
@@ -578,7 +597,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                         {question.order_index}. {question.text}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {question.default_time_seconds}s
+                        {secondsToMinutes(question.default_time_seconds)} min
                       </span>
                     </div>
                   ))}

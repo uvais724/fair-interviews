@@ -1,5 +1,6 @@
 import { createXlsxWorkbook, type Worksheet } from "@/lib/xlsx-export"
 import prisma from "@/lib/prisma"
+import { secondsToMinutes } from "@/lib/utils"
 
 export const runtime = "nodejs"
 
@@ -34,10 +35,9 @@ function safeFilePart(value: string) {
 
 export async function GET(
   _request: Request,
-  { params }: { params: Record<string, string | string[]> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: idParam } = await params
-  const id = Array.isArray(idParam) ? idParam[0] : idParam
+  const { id } = await params
 
   if (!id) {
     return new Response("Interview was not found.", { status: 404 })
@@ -117,8 +117,8 @@ export async function GET(
         { value: question.orderIndex, style: "number" },
         { value: question.tag, style: "tableCell" },
         { value: question.questionText, style: "tableCell" },
-        { value: `${question.allocatedTimeSeconds}s`, style: "number" },
-        { value: `${question.actualTimeSeconds ?? 0}s`, style: "number" },
+        { value: `${secondsToMinutes(question.allocatedTimeSeconds)} min`, style: "number" },
+        { value: `${secondsToMinutes(question.actualTimeSeconds ?? 0)} min`, style: "number" },
         { value: question.rating ? `${question.rating}/5` : "", style: "number" },
         { value: displayValue(question.notes), style: "tableCell" },
       ]),

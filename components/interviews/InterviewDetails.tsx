@@ -4,6 +4,8 @@ import { Download, Pencil, Save, Trash2, X } from "lucide-react"
 import Link from "next/link"
 import { useActionState, useState } from "react"
 
+import { secondsToMinutes } from "@/lib/utils"
+
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -167,8 +169,8 @@ function InterviewQuestionEditor({
             <div className="flex flex-col gap-1 text-sm text-gray-600 sm:items-end">
               <span>Rating {question.rating ?? "-"}/5</span>
               <span>
-                {question.actualTimeSeconds ?? 0}s /{" "}
-                {question.allocatedTimeSeconds}s
+                {secondsToMinutes(question.actualTimeSeconds ?? 0)} min /{" "}
+                {secondsToMinutes(question.allocatedTimeSeconds)} min
               </span>
             </div>
             <Button
@@ -194,7 +196,11 @@ function InterviewQuestionEditor({
 
   return (
     <li className="rounded border p-4">
-      <form action={updateFormAction} className="flex flex-col gap-4">
+      <form
+        key={`${question.id}-${question.actualTimeSeconds ?? 0}-${question.rating ?? 3}-${question.notes ?? ""}`}
+        action={updateFormAction}
+        className="flex flex-col gap-4"
+      >
         <input type="hidden" name="question_id" value={question.id} />
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-medium text-gray-500">
@@ -228,7 +234,7 @@ function InterviewQuestionEditor({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field data-invalid={!!updateState.errors?.actual_time_seconds}>
               <FieldLabel htmlFor={`interview-question-${question.id}-time`}>
-                Actual Time
+                Actual Time (minutes)
               </FieldLabel>
               <InputGroup>
                 <Input
@@ -236,14 +242,14 @@ function InterviewQuestionEditor({
                   name="actual_time_seconds"
                   type="number"
                   min={0}
-                  max={7200}
-                  step={30}
-                  defaultValue={question.actualTimeSeconds ?? 0}
+                  max={120}
+                  step={0.5}
+                  defaultValue={secondsToMinutes(question.actualTimeSeconds ?? 0)}
                   aria-invalid={!!updateState.errors?.actual_time_seconds}
                   required
                 />
                 <InputGroupAddon align="inline-end">
-                  <InputGroupText>seconds</InputGroupText>
+                  <InputGroupText>minutes</InputGroupText>
                 </InputGroupAddon>
               </InputGroup>
               <FieldError

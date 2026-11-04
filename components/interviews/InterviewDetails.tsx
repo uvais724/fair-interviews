@@ -513,14 +513,16 @@ export default function InterviewDetails({
                 >
                   <Pencil />
                 </Button>
-                <Link
+                <a
                   href={`/pages/interviews/${interview.id}/export`}
                   className={buttonVariants({ variant: "outline", size: "icon-sm" })}
                   aria-label="Export interview"
                   title="Export interview"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <Download />
-                </Link>
+                </a>
                 <AlertDialog>
                   <AlertDialogTrigger
                     className={buttonVariants({

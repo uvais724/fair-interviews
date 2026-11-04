@@ -8,7 +8,6 @@ function formatDate(value: Date) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "UTC",
   }).format(value)
 }
 

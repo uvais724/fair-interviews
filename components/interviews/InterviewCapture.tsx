@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Play, RotateCcw, Send } from "lucide-react"
+import { Play, RotateCcw, Send, Star } from "lucide-react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import * as z from "zod"
 
@@ -98,6 +98,62 @@ function getKitQuestions(kitId: string, availableQuestions: KitQuestion[]) {
     .sort((first, second) => first.order_index - second.order_index)
 }
 
+const ratingNoteMessages = [
+  "Candidate showed significant gaps in this area and would need substantial support.",
+  "Candidate showed some relevant understanding, but there were clear gaps and limited depth.",
+  "Candidate met expectations with a generally solid answer and reasonable examples.",
+  "Candidate performed well with clear reasoning and strong examples.",
+  "Candidate delivered an excellent answer with depth, confidence, and strong examples.",
+] as const
+
+function getRatingNoteText(rating: number) {
+  const normalizedRating = Math.min(5, Math.max(1, Number.isFinite(rating) ? Math.round(rating) : 3))
+
+  return ratingNoteMessages[normalizedRating - 1]
+}
+
+function StarRating({
+  value,
+  onChange,
+  label,
+}: {
+  value: number
+  onChange: (value: number) => void
+  label: string
+}) {
+  const normalizedValue = Math.min(5, Math.max(0, Number(value) || 0))
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="flex items-center gap-1.5"
+    >
+      {[1, 2, 3, 4, 5].map((star) => {
+        const active = star <= normalizedValue
+
+        return (
+          <button
+            key={star}
+            type="button"
+            role="radio"
+            aria-label={`${star} star${star === 1 ? "" : "s"}`}
+            aria-checked={active}
+            className="rounded-sm p-0.5 text-amber-500 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={() => onChange(star)}
+          >
+            <Star
+              className="h-6 w-6"
+              fill={active ? "currentColor" : "none"}
+              strokeWidth={1.8}
+            />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function SelectField({
   children,
   ...props
@@ -123,6 +179,13 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
   const [availableKits, setAvailableKits] = React.useState<Kit[]>([])
   const [availableQuestions, setAvailableQuestions] = React.useState<KitQuestion[]>([])
   const [isLoadingQuestions, setIsLoadingQuestions] = React.useState(true)
+  const noteTouchedMap = React.useRef<Record<number, boolean>>({})
+  const noteDefaultMap = React.useRef<Record<number, string>>({})
+
+  function resetQuestionNotesState() {
+    noteTouchedMap.current = {}
+    noteDefaultMap.current = {}
+  }
 
   React.useEffect(() => {
     let active = true
@@ -190,6 +253,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
   function startInterview(data: StartFormValues) {
     const kitQuestions = getKitQuestions(data.kit_id, availableQuestions)
 
+    resetQuestionNotesState()
     captureForm.reset({
       questions: kitQuestions.map((question) => ({
         question_id: question.id,
@@ -198,7 +262,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
         allocated_time_seconds: question.default_time_seconds,
         actual_time_seconds: secondsToMinutes(question.default_time_seconds),
         rating: 3,
-        notes: "",
+        notes: getRatingNoteText(3),
       })),
       overall_rating: 3,
       overall_verdict: "hold",
@@ -208,6 +272,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
   }
 
   function resetInterview() {
+    resetQuestionNotesState()
     setStartedInterview(null)
     captureForm.reset()
   }
@@ -258,7 +323,9 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
         <CardContent>
           <form
             id="interview-capture-form"
-            onSubmit={captureForm.handleSubmit(submitInterview)}
+            onSubmit={(event) => {
+              void captureForm.handleSubmit(submitInterview)(event)
+            }}
           >
             <FieldGroup>
               {questionFields.map((question, index) => (
@@ -314,32 +381,43 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                     <Controller
                       name={`questions.${index}.rating`}
                       control={captureForm.control}
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel
-                            htmlFor={`interview-question-${index}-rating`}
-                          >
-                            Rating
-                          </FieldLabel>
-                          <Input
-                            {...field}
-                            value={field.value as number | string}
-                            id={`interview-question-${index}-rating`}
-                            type="number"
-                            min={1}
-                            max={5}
-                            step={1}
-                            aria-invalid={fieldState.invalid}
-                            onChange={(event) =>
-                              field.onChange(event.target.value)
-                            }
-                          />
-                          <FieldDescription>Use a 1 to 5 score.</FieldDescription>
-                          {fieldState.invalid && (
-                            <FieldError errors={[fieldState.error]} />
-                          )}
-                        </Field>
-                      )}
+                      render={({ field, fieldState }) => {
+                        const noteFieldName = `questions.${index}.notes` as const
+
+                        return (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel
+                              htmlFor={`interview-question-${index}-rating`}
+                            >
+                              Rating
+                            </FieldLabel>
+                            <div
+                              id={`interview-question-${index}-rating`}
+                              className="rounded-md border border-input bg-background px-2 py-2"
+                            >
+                              <StarRating
+                                value={Number(field.value) || 0}
+                                label={`Question ${question.order_index} rating`}
+                                onChange={(nextValue) => {
+                                  field.onChange(nextValue)
+
+                                  const updatedNote = getRatingNoteText(nextValue)
+
+                                  noteDefaultMap.current[index] = updatedNote
+                                  captureForm.setValue(noteFieldName, updatedNote, {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                  })
+                                }}
+                              />
+                            </div>
+                            <FieldDescription>Tap a star to score this answer.</FieldDescription>
+                            {fieldState.invalid && (
+                              <FieldError errors={[fieldState.error]} />
+                            )}
+                          </Field>
+                        )
+                      }}
                     />
                   </div>
                   <Controller
@@ -358,6 +436,10 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                             rows={4}
                             className="min-h-24 resize-none"
                             aria-invalid={fieldState.invalid}
+                            onChange={(event) => {
+                              noteTouchedMap.current[index] = true
+                              field.onChange(event.target.value)
+                            }}
                           />
                           <InputGroupAddon align="block-end">
                             <InputGroupText className="tabular-nums">
@@ -385,18 +467,16 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
                           <FieldLabel htmlFor="interview-overall-rating">
                             Overall Rating
                           </FieldLabel>
-                          <Input
-                            {...field}
+                          <div
                             id="interview-overall-rating"
-                            type="number"
-                            min={1}
-                            max={5}
-                            step={1}
-                            aria-invalid={fieldState.invalid}
-                            onChange={(event) =>
-                              field.onChange(event.target.value)
-                            }
-                          />
+                            className="rounded-md border border-input bg-background px-2 py-2"
+                          >
+                            <StarRating
+                              value={Number(field.value) || 0}
+                              label="Overall rating"
+                              onChange={(nextValue) => field.onChange(nextValue)}
+                            />
+                          </div>
                           {fieldState.invalid && (
                             <FieldError errors={[fieldState.error]} />
                           )}
@@ -488,7 +568,9 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
       <CardContent>
         <form
           id="interview-start-form"
-          onSubmit={startForm.handleSubmit(startInterview)}
+          onSubmit={(event) => {
+            void startForm.handleSubmit(startInterview)(event)
+          }}
         >
           <FieldGroup>
             <div className="grid gap-4 sm:grid-cols-2">

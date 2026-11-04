@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import React from 'react'
 
 import {
@@ -51,13 +50,6 @@ export default function KitDetails({
 }: KitDetailsProps) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-6">
-      <Link
-        href="/pages/question-kits"
-        className="w-fit rounded border px-3 py-2 text-sm hover:bg-gray-50"
-      >
-        Back to Question Kits
-      </Link>
-
       <KitHeaderEditor
         questionKit={questionKit}
         updateKitAction={updateKitAction}

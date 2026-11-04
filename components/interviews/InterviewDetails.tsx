@@ -1,7 +1,6 @@
 "use client"
 
 import { Download, Pencil, Save, Trash2, X } from "lucide-react"
-import Link from "next/link"
 import { useActionState, useState } from "react"
 
 import { secondsToMinutes } from "@/lib/utils"
@@ -330,13 +329,6 @@ export default function InterviewDetails({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-6">
-      <Link
-        href="/pages/interviews"
-        className="w-fit rounded border px-3 py-2 text-sm hover:bg-gray-50"
-      >
-        Back to Interviews
-      </Link>
-
       <section className="flex flex-col gap-4 rounded border p-4">
         {isEditing ? (
           <form action={updateFormAction} className="flex flex-col gap-4">

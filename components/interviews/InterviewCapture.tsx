@@ -85,6 +85,18 @@ type KitQuestion = {
   default_time_seconds: number
 }
 
+type QuestionTimerState = {
+  isRunning: boolean
+  startedAt: number | null
+  elapsedMs: number
+  status: "idle" | "running" | "paused" | "timeout"
+}
+
+type QuestionTimerTrigger = {
+  id: string
+  default_time_seconds: number
+}
+
 function getLocalDateTimeValue() {
   const now = new Date()
   const offsetMs = now.getTimezoneOffset() * 60 * 1000
@@ -179,15 +191,77 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
   const [availableKits, setAvailableKits] = React.useState<Kit[]>([])
   const [availableQuestions, setAvailableQuestions] = React.useState<KitQuestion[]>([])
   const [isLoadingQuestions, setIsLoadingQuestions] = React.useState(true)
+  const [questionTimers, setQuestionTimers] = React.useState<
+    Record<string, QuestionTimerState>
+  >({})
   const noteTouchedMap = React.useRef<Record<number, boolean>>({})
   const noteDefaultMap = React.useRef<Record<number, string>>({})
+  const manualActualTimeMap = React.useRef<Record<string, boolean>>({})
 
   function resetQuestionNotesState() {
     noteTouchedMap.current = {}
     noteDefaultMap.current = {}
   }
 
+  function getQuestionTimer(questionId: string): QuestionTimerState {
+    return (
+      questionTimers[questionId] ?? {
+        isRunning: false,
+        startedAt: null,
+        elapsedMs: 0,
+        status: "idle",
+      }
+    )
+  }
+
+  function toggleQuestionTimer(question: QuestionTimerTrigger) {
+    const currentTimer = getQuestionTimer(question.id)
+
+    if (currentTimer.status === "timeout") {
+      return
+    }
+
+    if (currentTimer.isRunning) {
+      setQuestionTimers((previous) => ({
+        ...previous,
+        [question.id]: {
+          ...currentTimer,
+          isRunning: false,
+          startedAt: null,
+          status: "paused",
+          elapsedMs: currentTimer.elapsedMs,
+        },
+      }))
+      return
+    }
+
+    const totalMs = question.default_time_seconds * 1000
+    const nextElapsedMs = Math.min(currentTimer.elapsedMs, totalMs)
+    const questionIndex = questionFields.findIndex(
+      (field) => field.question_id === question.id,
+    )
+
+    setQuestionTimers((previous) => ({
+      ...previous,
+      [question.id]: {
+        isRunning: true,
+        startedAt: Date.now() - nextElapsedMs,
+        elapsedMs: nextElapsedMs,
+        status: "running",
+      },
+    }))
+
+    if (questionIndex >= 0) {
+      captureForm.setValue(
+        `questions.${questionIndex}.actual_time_seconds`,
+        0,
+        { shouldDirty: true, shouldTouch: true },
+      )
+    }
+  }
+
   React.useEffect(() => {
+
     let active = true
 
     async function loadQuestions() {
@@ -250,9 +324,107 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
   const selectedKit = availableKits.find((kit) => kit.id === selectedKitId)
   const selectedQuestions = getKitQuestions(selectedKitId ?? "", availableQuestions)
 
+  React.useEffect(() => {
+    const activeTimerIds = questionFields
+      .map((field) => field.question_id)
+      .filter((questionId) => {
+        const timer = questionTimers[questionId]
+        return timer?.isRunning && timer.startedAt !== null
+      })
+
+    if (activeTimerIds.length === 0) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      setQuestionTimers((previous) => {
+        let changed = false
+        const nextTimers = { ...previous }
+
+        for (const questionId of activeTimerIds) {
+          const timer = nextTimers[questionId]
+          const question = questionFields.find(
+            (field) => field.question_id === questionId,
+          )
+
+          if (!timer || !question || !timer.isRunning || timer.startedAt === null) {
+            continue
+          }
+
+          const nextElapsedMs = Date.now() - timer.startedAt
+          const totalTimeMs = question.allocated_time_seconds * 1000
+
+          if (nextElapsedMs >= totalTimeMs) {
+            nextTimers[questionId] = {
+              ...timer,
+              isRunning: false,
+              startedAt: null,
+              elapsedMs: totalTimeMs,
+              status: "timeout",
+            }
+            changed = true
+            continue
+          }
+
+          if (timer.elapsedMs !== nextElapsedMs) {
+            nextTimers[questionId] = {
+              ...timer,
+              elapsedMs: nextElapsedMs,
+              status: "running",
+            }
+            changed = true
+          }
+        }
+
+        return changed ? nextTimers : previous
+      })
+    }, 100)
+
+    return () => window.clearInterval(intervalId)
+  }, [questionFields, questionTimers])
+
+  React.useEffect(() => {
+    questionFields.forEach((question, index) => {
+      const timer = questionTimers[question.question_id]
+      const isManualOverride = manualActualTimeMap.current[question.question_id]
+
+      if (isManualOverride) {
+        return
+      }
+
+      if (!timer) {
+        if (Number(captureForm.getValues(`questions.${index}.actual_time_seconds`)) !== 0) {
+          captureForm.setValue(`questions.${index}.actual_time_seconds`, 0, {
+            shouldDirty: true,
+            shouldTouch: true,
+          })
+        }
+        return
+      }
+
+      const nextActualMinutes =
+        timer.status === "timeout"
+          ? Number((question.allocated_time_seconds / 60).toFixed(1))
+          : Number((timer.elapsedMs / 60000).toFixed(1))
+
+      const currentActualMinutes = Number(
+        captureForm.getValues(`questions.${index}.actual_time_seconds`),
+      )
+
+      if (currentActualMinutes !== nextActualMinutes) {
+        captureForm.setValue(
+          `questions.${index}.actual_time_seconds`,
+          nextActualMinutes,
+          { shouldDirty: true, shouldTouch: true },
+        )
+      }
+    })
+  }, [captureForm, questionFields, questionTimers])
+
   function startInterview(data: StartFormValues) {
     const kitQuestions = getKitQuestions(data.kit_id, availableQuestions)
 
+    setQuestionTimers({})
     resetQuestionNotesState()
     captureForm.reset({
       questions: kitQuestions.map((question) => ({
@@ -260,7 +432,7 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
         question_text: question.text,
         order_index: question.order_index,
         allocated_time_seconds: question.default_time_seconds,
-        actual_time_seconds: secondsToMinutes(question.default_time_seconds),
+        actual_time_seconds: 0,
         rating: 3,
         notes: getRatingNoteText(3),
       })),
@@ -271,8 +443,34 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
     setStartedInterview(data)
   }
 
+  function resetQuestionTimer(questionId: string) {
+    manualActualTimeMap.current[questionId] = false
+    setQuestionTimers((previous) => ({
+      ...previous,
+      [questionId]: {
+        isRunning: false,
+        startedAt: null,
+        elapsedMs: 0,
+        status: "idle",
+      },
+    }))
+
+    const questionIndex = questionFields.findIndex(
+      (field) => field.question_id === questionId,
+    )
+
+    if (questionIndex >= 0) {
+      captureForm.setValue(
+        `questions.${questionIndex}.actual_time_seconds`,
+        0,
+        { shouldDirty: true, shouldTouch: true },
+      )
+    }
+  }
+
   function resetInterview() {
     resetQuestionNotesState()
+    setQuestionTimers({})
     setStartedInterview(null)
     captureForm.reset()
   }
@@ -328,134 +526,278 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
             }}
           >
             <FieldGroup>
-              {questionFields.map((question, index) => (
-                <div key={question.question_id} className="rounded-lg border p-4">
-                  <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium">
-                        Question {question.order_index}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {question.question_text}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {secondsToMinutes(question.allocated_time_seconds)} min allocated
-                    </span>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-[1fr_1fr]">
-                    <Controller
-                      name={`questions.${index}.actual_time_seconds`}
-                      control={captureForm.control}
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel
-                            htmlFor={`interview-question-${index}-time`}
-                          >
-                            Actual Time (minutes)
-                          </FieldLabel>
-                          <InputGroup>
-                            <Input
-                              {...field}
-                              value={field.value as number | string}
-                              id={`interview-question-${index}-time`}
-                              type="number"
-                              min={0}
-                              max={120}
-                              step={0.5}
-                              aria-invalid={fieldState.invalid}
-                              onChange={(event) =>
-                                field.onChange(event.target.value)
-                              }
-                            />
-                            <InputGroupAddon align="inline-end">
-                              <InputGroupText>minutes</InputGroupText>
-                            </InputGroupAddon>
-                          </InputGroup>
-                          {fieldState.invalid && (
-                            <FieldError errors={[fieldState.error]} />
-                          )}
-                        </Field>
-                      )}
+              {questionFields.map((question, index) => {
+                const timer = getQuestionTimer(question.question_id)
+                const totalTimeMs = question.allocated_time_seconds * 1000
+                const progress =
+                  timer.status === "timeout"
+                    ? 100
+                    : Math.min(100, (timer.elapsedMs / totalTimeMs) * 100 || 0)
+
+                return (
+                  <div
+                    key={question.question_id}
+                    className="relative overflow-hidden rounded-lg border p-4"
+                  >
+                    <div
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute inset-y-0 left-0 transition-all duration-200 ${
+                        timer.status === "timeout"
+                          ? "bg-red-500/30"
+                          : timer.isRunning
+                            ? "bg-amber-500/20"
+                            : "bg-slate-200/60"
+                      }`}
+                      style={{ width: `${progress}%` }}
                     />
-                    <Controller
-                      name={`questions.${index}.rating`}
-                      control={captureForm.control}
-                      render={({ field, fieldState }) => {
-                        const noteFieldName = `questions.${index}.notes` as const
-
-                        return (
-                          <Field data-invalid={fieldState.invalid}>
-                            <FieldLabel
-                              htmlFor={`interview-question-${index}-rating`}
+                    <div className="relative">
+                      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-medium">
+                            Question {question.order_index}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {question.question_text}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {secondsToMinutes(question.allocated_time_seconds)} min allocated
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant={
+                                timer.status === "timeout"
+                                  ? "destructive"
+                                  : timer.isRunning
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                              size="sm"
+                              onClick={() =>
+                                toggleQuestionTimer({
+                                  id: question.question_id,
+                                  default_time_seconds: question.allocated_time_seconds,
+                                })
+                              }
+                              disabled={timer.status === "timeout"}
                             >
-                              Rating
+                              {timer.status === "timeout"
+                                ? "Timeout"
+                                : timer.isRunning
+                                  ? "Stop"
+                                  : "Start Timer"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => resetQuestionTimer(question.question_id)}
+                            >
+                              Reset Time
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Controller
+                          name={`questions.${index}.allocated_time_seconds`}
+                          control={captureForm.control}
+                          render={({ field, fieldState }) => (
+                            <Field data-invalid={fieldState.invalid}>
+                              <FieldLabel
+                                htmlFor={`interview-question-${index}-allocated-time`}
+                              >
+                                Allocated Time (minutes)
+                              </FieldLabel>
+                              <InputGroup>
+                                <Input
+                                  {...field}
+                                  value={secondsToMinutes(field.value) as number | string}
+                                  id={`interview-question-${index}-allocated-time`}
+                                  type="number"
+                                  min={0}
+                                  max={120}
+                                  step={0.1}
+                                  aria-invalid={fieldState.invalid}
+                                  onChange={(event) => {
+                                    const nextMinutes = Number(event.target.value) || 0
+                                    field.onChange(Math.round(nextMinutes * 60))
+                                  }}
+                                />
+                                <InputGroupAddon align="inline-end">
+                                  <InputGroupText>minutes</InputGroupText>
+                                </InputGroupAddon>
+                              </InputGroup>
+                              {fieldState.invalid && (
+                                <FieldError errors={[fieldState.error]} />
+                              )}
+                            </Field>
+                          )}
+                        />
+                        <Controller
+                          name={`questions.${index}.actual_time_seconds`}
+                          control={captureForm.control}
+                          render={({ field, fieldState }) => (
+                            <Field data-invalid={fieldState.invalid}>
+                              <FieldLabel
+                                htmlFor={`interview-question-${index}-time`}
+                              >
+                                Actual Time (minutes)
+                              </FieldLabel>
+                              <InputGroup>
+                                <Input
+                                  {...field}
+                                  value={field.value === "" ? "" : (field.value as number | string)}
+                                  id={`interview-question-${index}-time`}
+                                  type="number"
+                                  min={0}
+                                  max={120}
+                                  step={0.1}
+                                  aria-invalid={fieldState.invalid}
+                                  onFocus={() => {
+                                    const timer = getQuestionTimer(question.question_id)
+                                    if (timer.isRunning) {
+                                      setQuestionTimers((previous) => ({
+                                        ...previous,
+                                        [question.question_id]: {
+                                          ...timer,
+                                          isRunning: false,
+                                          startedAt: null,
+                                          status: "paused",
+                                          elapsedMs: timer.elapsedMs,
+                                        },
+                                      }))
+                                    }
+                                    manualActualTimeMap.current[question.question_id] = true
+                                  }}
+                                  onChange={(event) => {
+                                    const rawValue = event.target.value
+
+                                    if (rawValue === "") {
+                                      manualActualTimeMap.current[question.question_id] = false
+                                      field.onChange("")
+                                      setQuestionTimers((previous) => ({
+                                        ...previous,
+                                        [question.question_id]: {
+                                          isRunning: false,
+                                          startedAt: null,
+                                          elapsedMs: 0,
+                                          status: "paused",
+                                        },
+                                      }))
+                                      return
+                                    }
+
+                                    const nextValue = Math.min(
+                                      120,
+                                      Math.max(0, Number(rawValue) || 0),
+                                    )
+                                    manualActualTimeMap.current[question.question_id] = false
+                                    field.onChange(nextValue)
+                                    setQuestionTimers((previous) => ({
+                                      ...previous,
+                                      [question.question_id]: {
+                                        isRunning: false,
+                                        startedAt: null,
+                                        elapsedMs: nextValue * 60000,
+                                        status: "paused",
+                                      },
+                                    }))
+                                  }}
+                                />
+                                <InputGroupAddon align="inline-end">
+                                  <InputGroupText>minutes</InputGroupText>
+                                </InputGroupAddon>
+                              </InputGroup>
+                              {fieldState.invalid && (
+                                <FieldError errors={[fieldState.error]} />
+                              )}
+                            </Field>
+                          )}
+                        />
+                        <Controller
+                          name={`questions.${index}.rating`}
+                          control={captureForm.control}
+                          render={({ field, fieldState }) => {
+                            const noteFieldName = `questions.${index}.notes` as const
+
+                            return (
+                              <Field data-invalid={fieldState.invalid}>
+                                <FieldLabel
+                                  htmlFor={`interview-question-${index}-rating`}
+                                >
+                                  Rating
+                                </FieldLabel>
+                                <div
+                                  id={`interview-question-${index}-rating`}
+                                  className="rounded-md border border-input bg-background px-2 py-2"
+                                >
+                                  <StarRating
+                                    value={Number(field.value) || 0}
+                                    label={`Question ${question.order_index} rating`}
+                                    onChange={(nextValue) => {
+                                      field.onChange(nextValue)
+
+                                      const updatedNote = getRatingNoteText(nextValue)
+
+                                      noteDefaultMap.current[index] = updatedNote
+                                      captureForm.setValue(noteFieldName, updatedNote, {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                      })
+                                    }}
+                                  />
+                                </div>
+                                <FieldDescription>
+                                  Tap a star to score this answer.
+                                </FieldDescription>
+                                {fieldState.invalid && (
+                                  <FieldError errors={[fieldState.error]} />
+                                )}
+                              </Field>
+                            )
+                          }}
+                        />
+                      </div>
+                      <Controller
+                        name={`questions.${index}.notes`}
+                        control={captureForm.control}
+                        render={({ field, fieldState }) => (
+                          <Field className="mt-4" data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor={`interview-question-${index}-notes`}>
+                              Notes
                             </FieldLabel>
-                            <div
-                              id={`interview-question-${index}-rating`}
-                              className="rounded-md border border-input bg-background px-2 py-2"
-                            >
-                              <StarRating
-                                value={Number(field.value) || 0}
-                                label={`Question ${question.order_index} rating`}
-                                onChange={(nextValue) => {
-                                  field.onChange(nextValue)
-
-                                  const updatedNote = getRatingNoteText(nextValue)
-
-                                  noteDefaultMap.current[index] = updatedNote
-                                  captureForm.setValue(noteFieldName, updatedNote, {
-                                    shouldDirty: true,
-                                    shouldTouch: true,
-                                  })
+                            <InputGroup>
+                              <InputGroupTextarea
+                                {...field}
+                                id={`interview-question-${index}-notes`}
+                                placeholder="Record the candidate's answer quality, gaps, and examples."
+                                rows={4}
+                                className="min-h-24 resize-none"
+                                aria-invalid={fieldState.invalid}
+                                onChange={(event) => {
+                                  noteTouchedMap.current[index] = true
+                                  field.onChange(event.target.value)
                                 }}
                               />
-                            </div>
-                            <FieldDescription>Tap a star to score this answer.</FieldDescription>
+                              <InputGroupAddon align="block-end">
+                                <InputGroupText className="tabular-nums">
+                                  {field.value.length}/500 characters
+                                </InputGroupText>
+                              </InputGroupAddon>
+                            </InputGroup>
                             {fieldState.invalid && (
                               <FieldError errors={[fieldState.error]} />
                             )}
                           </Field>
-                        )
-                      }}
-                    />
-                  </div>
-                  <Controller
-                    name={`questions.${index}.notes`}
-                    control={captureForm.control}
-                    render={({ field, fieldState }) => (
-                      <Field className="mt-4" data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor={`interview-question-${index}-notes`}>
-                          Notes
-                        </FieldLabel>
-                        <InputGroup>
-                          <InputGroupTextarea
-                            {...field}
-                            id={`interview-question-${index}-notes`}
-                            placeholder="Record the candidate's answer quality, gaps, and examples."
-                            rows={4}
-                            className="min-h-24 resize-none"
-                            aria-invalid={fieldState.invalid}
-                            onChange={(event) => {
-                              noteTouchedMap.current[index] = true
-                              field.onChange(event.target.value)
-                            }}
-                          />
-                          <InputGroupAddon align="block-end">
-                            <InputGroupText className="tabular-nums">
-                              {field.value.length}/500 characters
-                            </InputGroupText>
-                          </InputGroupAddon>
-                        </InputGroup>
-                        {fieldState.invalid && (
-                          <FieldError errors={[fieldState.error]} />
                         )}
-                      </Field>
-                    )}
-                  />
-                </div>
-              ))}
-
+                      />
+                    </div>
+                  </div>
+                )
+              })}
               <div className="rounded-lg border p-4">
                 <FieldGroup>
                   <div className="grid gap-4 sm:grid-cols-2">

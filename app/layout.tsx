@@ -32,7 +32,7 @@ export default function RootLayout({
       className={`${GeistSans.className} ${GeistMono.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <Link href="/" className="text-sm font-semibold tracking-tight text-foreground">
               Fair Interviews

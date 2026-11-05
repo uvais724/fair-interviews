@@ -1,8 +1,6 @@
 import type { Prisma } from "@/app/generated/prisma/client"
 import Link from "next/link"
 
-import { Button } from "@/components/ui/button"
-
 type InterviewWithDetails = Prisma.InterviewGetPayload<{
   include: {
     kit: true
@@ -32,9 +30,12 @@ export default function InterviewList({ interviews }: InterviewListProps) {
             Review captured interviews and start new sessions.
           </p>
         </div>
-        <Button>
-          <Link href="/pages/interviews/create">Capture Interview</Link>
-        </Button>
+        <Link
+          href="/pages/interviews/create"
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Capture Interview
+        </Link>
       </div>
 
       {interviews.length > 0 ? (
@@ -63,11 +64,12 @@ export default function InterviewList({ interviews }: InterviewListProps) {
                     {verdictLabel(interview.overallVerdict)}
                   </span>
                 </div>
-                <Button variant="link">
-                  <Link href={`/pages/interviews/${interview.id}`}>
-                    View Interview
-                  </Link>
-                </Button>
+                <Link
+                  href={`/pages/interviews/${interview.id}`}
+                  className="inline-flex items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  View Interview
+                </Link>
               </div>
             </li>
           ))}

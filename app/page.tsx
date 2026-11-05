@@ -15,84 +15,97 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import interviewsData from "@/mocks/interviews.json";
-import kitsData from "@/mocks/question-kits.json";
+import prisma from "@/lib/prisma";
 
-type InterviewRecord = {
-  id: string;
-  candidate_name: string;
-  candidate_role: string;
-  status: "completed" | "in_progress" | "draft";
-  overall_rating?: number | null;
-  overall_verdict?: string | null;
-  interview_date?: string;
-};
+async function getDashboardData() {
+  if (!process.env.DATABASE_URL) {
+    return { interviews: [], kits: [] };
+  }
 
-const interviews = interviewsData as InterviewRecord[];
-const kits = kitsData as Array<{
-  id: string;
-  title: string;
-  description: string;
-}>;
+  const [interviews, kits] = await Promise.all([
+    prisma.interview.findMany({
+      orderBy: {
+        interviewDate: "desc",
+      },
+      take: 4,
+      include: {
+        kit: true,
+        questions: true,
+      },
+    }),
+    prisma.questionKit.findMany({
+      orderBy: {
+        updatedAt: "desc",
+      },
+      take: 3,
+    }),
+  ]);
 
-const totalInterviews = interviews.length;
-const completedInterviews = interviews.filter(
-  (interview) => interview.status === "completed"
-).length;
-const activeInterviews = interviews.filter(
-  (interview) => interview.status === "in_progress"
-).length;
-const draftInterviews = interviews.filter(
-  (interview) => interview.status === "draft"
-).length;
-const ratings = interviews
-  .map((interview) => interview.overall_rating)
-  .filter((rating): rating is number => typeof rating === "number");
-const averageRating =
-  ratings.length > 0
-    ? (ratings.reduce((total, rating) => total + rating, 0) / ratings.length).toFixed(1)
-    : "—";
-const completionRate = totalInterviews
-  ? Math.round((completedInterviews / totalInterviews) * 100)
-  : 0;
+  return { interviews, kits };
+}
 
-const stats = [
-  {
-    title: "Total interviews",
-    value: totalInterviews.toString(),
-    detail: `${completedInterviews} completed so far`,
-    icon: Users,
-  },
-  {
-    title: "Completion rate",
-    value: `${completionRate}%`,
-    detail: `${draftInterviews} drafts in progress`,
-    icon: CheckCircle2,
-  },
-  {
-    title: "Active pipeline",
-    value: activeInterviews.toString(),
-    detail: "Candidates currently in review",
-    icon: BriefcaseBusiness,
-  },
-  {
-    title: "Avg. rating",
-    value: averageRating.toString(),
-    detail: "Across completed interviews",
-    icon: TrendingUp,
-  },
-];
+const statusClasses = {
+  DRAFT: "bg-slate-500/10 text-slate-700 dark:text-slate-300",
+  IN_PROGRESS: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  COMPLETED: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+} as const;
 
-const statusClasses: Record<InterviewRecord["status"], string> = {
-  completed: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  in_progress: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  draft: "bg-slate-500/10 text-slate-700 dark:text-slate-300",
-};
+const formattedStatus = (status: keyof typeof statusClasses) =>
+  status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-const formattedStatus = (status: InterviewRecord["status"]) =>
-  status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+export default async function Home() {
+  const { interviews, kits } = await getDashboardData();
 
-export default function Home() {
+  const totalInterviews = interviews.length;
+  const completedInterviews = interviews.filter(
+    (interview) => interview.status === "COMPLETED"
+  ).length;
+  const activeInterviews = interviews.filter(
+    (interview) => interview.status === "IN_PROGRESS"
+  ).length;
+  const draftInterviews = interviews.filter(
+    (interview) => interview.status === "DRAFT"
+  ).length;
+  const ratings = interviews
+    .map((interview) => interview.overallRating)
+    .filter((rating): rating is number => typeof rating === "number");
+  const averageRating =
+    ratings.length > 0
+      ? (
+          ratings.reduce((total, rating) => total + rating, 0) / ratings.length
+        ).toFixed(1)
+      : "—";
+  const completionRate = totalInterviews
+    ? Math.round((completedInterviews / totalInterviews) * 100)
+    : 0;
+
+  const stats = [
+    {
+      title: "Total interviews",
+      value: totalInterviews.toString(),
+      detail: `${completedInterviews} completed so far`,
+      icon: Users,
+    },
+    {
+      title: "Completion rate",
+      value: `${completionRate}%`,
+      detail: `${draftInterviews} drafts in progress`,
+      icon: CheckCircle2,
+    },
+    {
+      title: "Active pipeline",
+      value: activeInterviews.toString(),
+      detail: "Candidates currently in review",
+      icon: BriefcaseBusiness,
+    },
+    {
+      title: "Avg. rating",
+      value: averageRating.toString(),
+      detail: "Across completed interviews",
+      icon: TrendingUp,
+    },
+  ];
+
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <section className="flex flex-col gap-4 rounded-2xl border bg-linear-to-br from-background to-muted/50 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -161,31 +174,39 @@ export default function Home() {
           </CardHeader>
 
           <CardContent className="space-y-3">
-            {interviews.map((interview) => (
-              <div
-                key={interview.id}
-                className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 px-3 py-3"
-              >
-                <div>
-                  <p className="font-medium text-foreground">{interview.candidate_name}</p>
-                  <p className="text-sm text-muted-foreground">{interview.candidate_role}</p>
-                </div>
+            {interviews.length > 0 ? (
+              interviews.map((interview) => (
+                <div
+                  key={interview.id}
+                  className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 px-3 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">{interview.candidateName}</p>
+                    <p className="text-sm text-muted-foreground">{interview.candidateRole}</p>
+                  </div>
 
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusClasses[interview.status]}`}
-                  >
-                    {formattedStatus(interview.status)}
-                  </span>
-                  <div className="text-right text-sm">
-                    <p className="font-medium text-foreground">
-                      {interview.overall_rating ?? "—"}
-                    </p>
-                    <p className="text-muted-foreground">rating</p>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusClasses[interview.status]}`}
+                    >
+                      {formattedStatus(interview.status)}
+                    </span>
+                    <div className="text-right text-sm">
+                      <p className="font-medium text-foreground">
+                        {interview.overallRating ?? "—"}
+                      </p>
+                      <p className="text-muted-foreground">rating</p>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                No interviews are available yet. Add records to the Prisma
+                <code className="mx-1 rounded bg-muted px-1 py-0.5 text-[11px]">interviews</code>
+                table to populate this dashboard.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
@@ -209,21 +230,31 @@ export default function Home() {
             </div>
 
             <div className="space-y-3">
-              {kits.slice(0, 3).map((kit) => (
-                <div key={kit.id} className="rounded-lg border bg-card px-3 py-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-md bg-primary/10 p-1.5 text-primary">
-                        <Layers3 className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{kit.title}</p>
-                        <p className="text-xs text-muted-foreground">{kit.description}</p>
+              {kits.length > 0 ? (
+                kits.map((kit) => (
+                  <div key={kit.id} className="rounded-lg border bg-card px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-md bg-primary/10 p-1.5 text-primary">
+                          <Layers3 className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{kit.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {kit.description ?? "No description available"}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                  No kits are available in the Prisma
+                  <code className="mx-1 rounded bg-muted px-1 py-0.5 text-[11px]">question_kits</code>
+                  table yet.
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

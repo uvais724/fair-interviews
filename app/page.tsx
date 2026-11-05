@@ -95,7 +95,7 @@ const formattedStatus = (status: InterviewRecord["status"]) =>
 export default function Home() {
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      <section className="flex flex-col gap-4 rounded-2xl border bg-gradient-to-br from-background to-muted/50 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+      <section className="flex flex-col gap-4 rounded-2xl border bg-linear-to-br from-background to-muted/50 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
             Dashboard

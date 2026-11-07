@@ -1,5 +1,6 @@
 import type { Prisma } from "@/app/generated/prisma/client"
 import Link from "next/link"
+import { InterviewQrCode } from "@/components/interviews/InterviewQrCode"
 
 type InterviewWithDetails = Prisma.InterviewGetPayload<{
   include: {
@@ -30,12 +31,15 @@ export default function InterviewList({ interviews }: InterviewListProps) {
             Review captured interviews and start new sessions.
           </p>
         </div>
-        <Link
-          href="/pages/interviews/create"
-          className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          Capture Interview
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <InterviewQrCode href="/pages/interviews/create" />
+          <Link
+            href="/pages/interviews/create"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Capture Interview
+          </Link>
+        </div>
       </div>
 
       {interviews.length > 0 ? (

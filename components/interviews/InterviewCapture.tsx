@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/input-group"
 import { interviewCaptureSchema } from "@/lib/interview-validation"
 import { secondsToMinutes } from "@/lib/utils"
+import { InterviewQrCode } from "@/components/interviews/InterviewQrCode"
 
 const startSchema = interviewCaptureSchema.pick({
   candidate_name: true,
@@ -902,10 +903,15 @@ export function InterviewCapture({ action }: InterviewCaptureProps) {
   return (
     <Card className="w-full sm:max-w-3xl">
       <CardHeader>
-        <CardTitle>Start Interview</CardTitle>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>Start Interview</CardTitle>
         <CardDescription>
           Add candidate details and choose the question kit for this session.
         </CardDescription>
+          </div>
+          <InterviewQrCode href="/pages/interviews/create" />
+        </div>
       </CardHeader>
       <CardContent>
         <form

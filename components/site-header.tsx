@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { GitBranch, Menu, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { InterviewQrCode } from "@/components/interviews/InterviewQrCode";
@@ -50,6 +50,15 @@ export function SiteHeader({
 
         <div className="hidden items-center gap-3 md:flex">
           <InterviewQrCode href="/pages/interviews/create" />
+          <a
+            href="https://github.com/uvais724/fair-interviews"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-50 hover:text-cyan-900"
+          >
+            <GitBranch className="size-4" />
+            GitHub
+          </a>
           {session?.user ? (
             <>
               {navItems.map((item) => (
@@ -80,8 +89,7 @@ export function SiteHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
-          <InterviewQrCode href="/pages/interviews/create" />
+        <div className="md:hidden">
           <button
             type="button"
             onClick={() => setIsMenuOpen((current) => !current)}
@@ -96,6 +104,16 @@ export function SiteHeader({
       {isMenuOpen ? (
         <div className="border-t border-cyan-100 bg-white/90 md:hidden">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-4 sm:px-6">
+            <InterviewQrCode href="/pages/interviews/create" />
+            <a
+              href="https://github.com/uvais724/fair-interviews"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-50"
+            >
+              <GitBranch className="size-4" />
+              View on GitHub
+            </a>
             {session?.user ? (
               <>
                 {navItems.map((item) => (

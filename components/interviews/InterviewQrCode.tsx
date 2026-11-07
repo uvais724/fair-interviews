@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Copy, QrCode, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -44,7 +45,7 @@ export function InterviewQrCode({ href }: InterviewQrCodeProps) {
         Scan on mobile
       </Button>
 
-      {isOpen && (
+      {isOpen && createPortal((
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           role="presentation"
@@ -105,7 +106,7 @@ export function InterviewQrCode({ href }: InterviewQrCodeProps) {
             </div>
           </section>
         </div>
-      )}
+      ), document.body)}
     </>
   )
 }

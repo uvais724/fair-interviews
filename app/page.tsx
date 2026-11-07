@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { auth } from "@/auth";
+import { LandingPage } from "@/components/landing-page";
 import {
   Card,
   CardContent,
@@ -61,7 +61,7 @@ export default async function Home() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/login");
+    return <LandingPage />;
   }
 
   const { interviews, kits } = await getDashboardData(session.user.id);

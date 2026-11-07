@@ -23,7 +23,9 @@ export async function createInterview(data: FormData) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect(
+      `/login?callbackUrl=${encodeURIComponent("/pages/interviews/create")}`
+    );
   }
 
   const rawQuestions = data.get("questions")?.toString() ?? "[]"

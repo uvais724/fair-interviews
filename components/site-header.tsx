@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
+import { InterviewQrCode } from "@/components/interviews/InterviewQrCode";
 
 const navItems = [
   { href: "/pages/question-kits", label: "Question Kits" },
@@ -48,6 +49,7 @@ export function SiteHeader({
         </Link>
 
         <div className="hidden items-center gap-3 md:flex">
+          <InterviewQrCode href="/pages/interviews/create" />
           {session?.user ? (
             <>
               {navItems.map((item) => (
@@ -78,14 +80,17 @@ export function SiteHeader({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsMenuOpen((current) => !current)}
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-          className="inline-flex items-center justify-center rounded-md border border-cyan-200 bg-white/80 p-2 text-cyan-700 shadow-sm transition-colors hover:bg-cyan-50 md:hidden"
-        >
-          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <InterviewQrCode href="/pages/interviews/create" />
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((current) => !current)}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            className="inline-flex items-center justify-center rounded-md border border-cyan-200 bg-white/80 p-2 text-cyan-700 shadow-sm transition-colors hover:bg-cyan-50"
+          >
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {isMenuOpen ? (

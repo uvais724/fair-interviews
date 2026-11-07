@@ -142,6 +142,15 @@ export default function SignUpPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Creating account..." : "Sign up"}
             </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => signIn("google", { callbackUrl: "/" })}
+            >
+              Continue with Google
+            </Button>
           </form>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">

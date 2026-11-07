@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 
 import prisma from "@/lib/prisma";
@@ -17,6 +18,10 @@ declare module "next-auth" {
     id: string;
   }
 }
+
+const hasGoogleCredentials = Boolean(
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+);
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret:
@@ -67,8 +72,47 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
+    ...(hasGoogleCredentials
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== "google" || !user?.email) {
+        return true;
+      }
+
+      const email = user.email.trim().toLowerCase();
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser) {
+        user.id = existingUser.id;
+        return true;
+      }
+
+      const generatedPassword = await bcrypt.hash(
+        `${Date.now()}-${Math.random()}-${process.env.NEXTAUTH_SECRET ?? "fair-interviews"}`,
+        10
+      );
+
+      const createdUser = await prisma.user.create({
+        data: {
+          email,
+          name: user.name ?? profile?.name ?? email.split("@")[0],
+          password: generatedPassword,
+        },
+      });
+
+      user.id = createdUser.id;
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         const jwtToken = token as typeof token & { userId?: string };

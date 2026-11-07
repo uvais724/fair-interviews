@@ -111,6 +111,15 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => signIn("google", { callbackUrl })}
+            >
+              Continue with Google
+            </Button>
           </form>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">

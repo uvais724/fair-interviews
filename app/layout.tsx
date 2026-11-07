@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
@@ -15,6 +16,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Fair Interviews",
   description: "Interview and question kit management",
+  icons: {
+    icon: "/fair-interviews-logo.png",
+    shortcut: "/fair-interviews-logo.png",
+    apple: "/fair-interviews-logo.png",
+  },
 };
 
 const navItems = [
@@ -41,15 +47,15 @@ export default async function RootLayout({
               href="/"
               className="inline-flex items-center gap-3 text-sm font-semibold tracking-[0.18em] text-cyan-700 uppercase"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 via-sky-500 to-indigo-500 text-xs font-bold text-white shadow-[0_10px_20px_rgba(14,165,233,0.35)]">
-                F
-              </span>
-              <span className="flex items-center gap-2">
-                Fair Interviews
-                <span className="hidden rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[9px] font-medium tracking-[0.18em] text-cyan-700 sm:inline-block">
-                  AI
-                </span>
-              </span>
+              <Image
+                src="/abc.png"
+                alt="Fair Interviews logo"
+                width={50}
+                height={38}
+                priority
+                className="h-9 min-w-14 object-cover shadow-[0_10px_20px_rgba(14,165,233,0.25)]"
+              />
+              <span className="flex items-center gap-2">Fair Interviews</span>
             </Link>
             <div className="flex items-center gap-3">
               {session?.user ? (

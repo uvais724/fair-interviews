@@ -212,9 +212,7 @@ export default async function Home() {
               ))
             ) : (
               <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                No interviews are available yet. Add records to the Prisma
-                <code className="mx-1 rounded bg-muted px-1 py-0.5 text-[11px]">interviews</code>
-                table to populate this dashboard.
+                No interviews are available yet. Go ahead start capturing your first candidate evaluation!
               </div>
             )}
           </CardContent>
@@ -260,9 +258,7 @@ export default async function Home() {
                 ))
               ) : (
                 <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                  No kits are available in the Prisma
-                  <code className="mx-1 rounded bg-muted px-1 py-0.5 text-[11px]">question_kits</code>
-                  table yet.
+                  No kits are available! Create a new question kit to start capturing interviews.
                 </div>
               )}
             </div>

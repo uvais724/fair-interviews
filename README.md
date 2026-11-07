@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fair Interviews
 
-## Getting Started
+<p align="center">
+  <img src="public/Readme-logo.png" alt="Fair Interviews" width="180" />
+</p>
 
-First, run the development server:
+<p align="center">
+  An open-source workspace for preparing structured interviews and keeping candidate feedback organized.
+</p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+<p align="center">
+  <a href="https://github.com/uvais724/fair-interviews">GitHub repository</a>
+</p>
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fair Interviews helps hiring teams build reusable question kits, guide interview sessions, record consistent feedback, and review interview history in one place.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Create and manage reusable question kits with ordered questions, tags, and default time allocations.
+- Capture interviews with candidate name, role, date, and a selected question kit.
+- Use per-question timers and record actual answer duration.
+- Add notes and 1–5 ratings for each answer, plus an overall rating, comments, and Select, Hold, or Reject verdict.
+- Review, edit, and delete interview records and question kit content.
+- See recent interviews, completion rate, pipeline activity, ratings, and question kit coverage on the dashboard.
+- Export interview records and feedback as Excel workbooks.
+- Open the capture page on another device using the navbar QR code; sign-in redirects back to capture.
+- Sign in with email and password, or Google when Google OAuth is configured.
+- Track page views with Vercel Web Analytics when deployed with analytics enabled.
 
-## Learn More
+## Technology
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 16 App Router and React 19
+- TypeScript and Tailwind CSS 4
+- PostgreSQL with Prisma 7
+- NextAuth for authentication
+- Vercel Web Analytics
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Requirements
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Node.js 20.9 or later
+- npm
+- PostgreSQL
 
-## Deploy on Vercel
+## Local development
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Clone the repository and enter its directory.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ~~~sh
+   git clone https://github.com/uvais724/fair-interviews.git
+   cd fair-interviews
+   ~~~
+
+2. Copy the sample environment file and set `DATABASE_URL` to a PostgreSQL database you can use for development. Set a strong `AUTH_SECRET` as well. The app accepts either `AUTH_SECRET` or `NEXTAUTH_SECRET`.
+
+   ~~~sh
+   cp .env.example .env
+   ~~~
+
+   Generate a secret with `openssl rand -base64 32` and put the result in `.env`.
+
+3. Install dependencies. The postinstall step generates the Prisma client, so configure `DATABASE_URL` first.
+
+   ~~~sh
+   npm install
+   ~~~
+
+4. Apply database migrations.
+
+   ~~~sh
+   npx prisma migrate deploy
+   ~~~
+
+5. Optionally load sample data, then start the development server.
+
+   ~~~sh
+   npx prisma db seed
+   npm run dev
+   ~~~
+
+   Visit [http://localhost:3000](http://localhost:3000).
+
+The seed script deletes existing application records before loading sample users, kits, and interviews. Use it only with a disposable development database; do not run it against production or data you need to keep.
+
+### Optional Google sign-in
+
+To enable Google sign-in, create OAuth credentials and set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`. If either value is missing, email/password sign-in remains available.
+
+### Useful commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run lint` | Run ESLint |
+| `npm run build` | Generate the Prisma client and build the app |
+| `npx prisma migrate dev --name describe_change` | Create and apply a development migration |
+| `npx prisma migrate deploy` | Apply committed migrations |
+| `npx prisma db seed` | Clear and repopulate the database with development sample data |
+
+## Environment variables
+
+See [.env.example](.env.example) for the variable names and sample formats.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `AUTH_SECRET` or `NEXTAUTH_SECRET` | Yes for deployed environments | Secret used to sign authentication tokens |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret |
+
+Never commit real credentials or `.env` files. The QR code image is generated by QRServer and includes the capture page URL. Vercel Web Analytics tracks page views when enabled in the Vercel project; it does not intentionally send interview form fields as analytics events.
+
+## Project structure
+
+| Path | Contents |
+| --- | --- |
+| `app/` | Routes, authentication pages, server actions, and API handlers |
+| `components/interviews/` | Interview capture, records, and QR code UI |
+| `components/kits/` | Question kit editors and lists |
+| `lib/` | Validation, database access, utilities, and Excel generation |
+| `prisma/` | Database schema, migrations, and development seed data |
+
+## Contributing
+
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup, change guidance, and pull request expectations. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues using the process in [SECURITY.md](SECURITY.md).
+
+## License
+
+No license has been selected for this repository yet. Until a license is added, the code is not explicitly licensed for reuse, modification, or redistribution. Please open an issue or contact the maintainer to discuss licensing.

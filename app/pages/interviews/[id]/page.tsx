@@ -43,7 +43,9 @@ function toVerdict(value: "select" | "hold" | "reject") {
 
 export default async function InterviewDetailsPage({
   params,
-}: PageProps<"/pages/interviews/[id]">) {
+}: {
+  params: Promise<{ id: string }>
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {

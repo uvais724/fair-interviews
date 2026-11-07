@@ -30,7 +30,9 @@ async function getQuestionKit(id: string, userId: string) {
 
 export default async function QuestionKitDetailsPage({
   params,
-}: PageProps<"/pages/question-kits/[id]">) {
+}: {
+  params: Promise<{ id: string }>
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {

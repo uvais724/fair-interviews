@@ -35,10 +35,21 @@ export default async function RootLayout({
       className={`${GeistSans.className} ${GeistMono.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+        <header className="sticky top-0 z-20 border-b border-cyan-200/80 bg-white/70 backdrop-blur-xl supports-backdrop-filter:bg-white/60">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <Link href="/" className="text-sm font-semibold tracking-tight text-foreground">
-              Fair Interviews
+            <Link
+              href="/"
+              className="inline-flex items-center gap-3 text-sm font-semibold tracking-[0.18em] text-cyan-700 uppercase"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 via-sky-500 to-indigo-500 text-xs font-bold text-white shadow-[0_10px_20px_rgba(14,165,233,0.35)]">
+                F
+              </span>
+              <span className="flex items-center gap-2">
+                Fair Interviews
+                <span className="hidden rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[9px] font-medium tracking-[0.18em] text-cyan-700 sm:inline-block">
+                  AI
+                </span>
+              </span>
             </Link>
             <div className="flex items-center gap-3">
               {session?.user ? (
@@ -48,7 +59,7 @@ export default async function RootLayout({
                       <NavigationMenuItem key={item.href}>
                         <NavigationMenuLink
                           href={item.href}
-                          className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground"
+                          className="rounded-md px-3 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-50 hover:text-cyan-900 data-[active=true]:bg-cyan-50 data-[active=true]:text-cyan-900"
                         >
                           {item.label}
                         </NavigationMenuLink>
@@ -67,7 +78,7 @@ export default async function RootLayout({
                 >
                   <button
                     type="submit"
-                    className="rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                    className="rounded-md border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition-transform hover:-translate-y-0.5 hover:bg-cyan-50"
                   >
                     Sign out
                   </button>
@@ -75,7 +86,7 @@ export default async function RootLayout({
               ) : (
                 <Link
                   href="/login"
-                  className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  className="rounded-md bg-cyan-600 px-3 py-2 text-sm font-medium text-white shadow-[0_10px_20px_rgba(14,165,233,0.25)] transition-transform hover:-translate-y-0.5 hover:bg-cyan-500"
                 >
                   Log in
                 </Link>

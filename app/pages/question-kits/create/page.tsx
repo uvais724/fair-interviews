@@ -1,10 +1,19 @@
-import { KitForm } from '@/components/kits/KitForm'
-import prisma from '@/lib/prisma';
-import { kitInputSchema } from '@/lib/question-kit-validation';
-import { minutesToSeconds } from '@/lib/utils';
+import { redirect } from "next/navigation";
+
+import { auth } from "@/auth";
+import { KitForm } from "@/components/kits/KitForm";
+import prisma from "@/lib/prisma";
+import { kitInputSchema } from "@/lib/question-kit-validation";
+import { minutesToSeconds } from "@/lib/utils";
 
 export async function createQuestionKit(data: FormData) {
-    'use server'
+    "use server"
+
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        redirect("/login");
+    }
 
     const rawQuestions = data.get('questions')?.toString() ?? '[]'
     let questions: unknown
@@ -46,15 +55,9 @@ export async function createQuestionKit(data: FormData) {
 
     const { title, description, questions: validatedQuestions } = validatedFields.data
 
-    const user = await prisma.user.findFirst()
-
-    if (!user) {
-        throw new Error('No user found in the database. Create a user first.')
-    }
-
     await prisma.questionKit.create({
         data: {
-            userId: user.id,
+            userId: session.user.id,
             title,
             description: description || null,
             questions: {
@@ -69,6 +72,12 @@ export async function createQuestionKit(data: FormData) {
     })
 }
 
-export default function page() {
-    return <KitForm action={createQuestionKit} />
+export default async function Page() {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        redirect("/login");
+    }
+
+    return <KitForm action={createQuestionKit} />;
 }

@@ -1,3 +1,4 @@
+import { auth } from "@/auth"
 import { createXlsxWorkbook, type Worksheet } from "@/lib/xlsx-export"
 import prisma from "@/lib/prisma"
 import { secondsToMinutes } from "@/lib/utils"
@@ -36,6 +37,12 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return new Response("Unauthorized", { status: 401 })
+  }
+
   const { id } = await params
 
   if (!id) {
@@ -45,6 +52,7 @@ export async function GET(
   const interview = await prisma.interview.findUnique({
     where: {
       id,
+      userId: session.user.id,
     },
     include: {
       kit: {

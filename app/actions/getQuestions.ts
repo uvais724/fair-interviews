@@ -1,9 +1,14 @@
 "use server";
 
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 export async function getQuestions() {
+  const session = await auth();
+  const userId = session?.user?.id;
+
   const questionKits = await prisma.questionKit.findMany({
+    where: userId ? { userId } : undefined,
     include: {
       questions: {
         orderBy: {
@@ -32,5 +37,13 @@ export async function getQuestions() {
 }
 
 export async function getQuestionKits() {
-    return await prisma.questionKit.findMany();
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  return await prisma.questionKit.findMany({
+    where: userId ? { userId } : undefined,
+    orderBy: {
+      updatedAt: "desc",
+    },
+  });
 }

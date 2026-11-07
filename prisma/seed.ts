@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
@@ -48,6 +49,7 @@ type SeedQuestionKitInput = {
 type SeedUserInput = {
   name: string;
   email: string;
+  password: string;
   questionKits: SeedQuestionKitInput[];
 };
 
@@ -55,6 +57,7 @@ const userData: SeedUserInput[] = [
   {
     name: "Ava Patel",
     email: "ava.patel@example.com",
+    password: "password123",
     questionKits: [
       {
         title: "Frontend Engineering",
@@ -115,6 +118,7 @@ const userData: SeedUserInput[] = [
   {
     name: "Noah Brooks",
     email: "noah.brooks@example.com",
+    password: "password123",
     questionKits: [
       {
         title: "Product-minded Engineering",
@@ -146,10 +150,13 @@ export async function main() {
   await prisma.user.deleteMany();
 
   for (const seedUser of userData) {
+    const passwordHash = await bcrypt.hash(seedUser.password, 10);
+
     const user = await prisma.user.create({
       data: {
         name: seedUser.name,
         email: seedUser.email,
+        password: passwordHash,
       },
     });
 

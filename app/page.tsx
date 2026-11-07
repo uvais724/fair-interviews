@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -8,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { auth } from "@/auth";
 import {
   Card,
   CardContent,
@@ -17,13 +19,14 @@ import {
 } from "@/components/ui/card";
 import prisma from "@/lib/prisma";
 
-async function getDashboardData() {
+async function getDashboardData(userId: string) {
   if (!process.env.DATABASE_URL) {
     return { interviews: [], kits: [] };
   }
 
   const [interviews, kits] = await Promise.all([
     prisma.interview.findMany({
+      where: { userId },
       orderBy: {
         interviewDate: "desc",
       },
@@ -34,6 +37,7 @@ async function getDashboardData() {
       },
     }),
     prisma.questionKit.findMany({
+      where: { userId },
       orderBy: {
         updatedAt: "desc",
       },
@@ -54,7 +58,13 @@ const formattedStatus = (status: keyof typeof statusClasses) =>
   status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 export default async function Home() {
-  const { interviews, kits } = await getDashboardData();
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  const { interviews, kits } = await getDashboardData(session.user.id);
 
   const totalInterviews = interviews.length;
   const completedInterviews = interviews.filter(

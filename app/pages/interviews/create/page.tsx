@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 
+import { auth } from "@/auth"
 import { InterviewCapture } from "@/components/interviews/InterviewCapture"
 import { InterviewStatus, InterviewVerdict } from "@/app/generated/prisma/client"
 import { interviewCaptureSchema } from "@/lib/interview-validation"
@@ -18,6 +19,12 @@ function toVerdict(value: "select" | "hold" | "reject") {
 
 export async function createInterview(data: FormData) {
   "use server"
+
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
 
   const rawQuestions = data.get("questions")?.toString() ?? "[]"
   let questions: unknown
@@ -62,15 +69,10 @@ export async function createInterview(data: FormData) {
     throw new Error("Interview data is invalid.")
   }
 
-  const user = await prisma.user.findFirst()
-
-  if (!user) {
-    throw new Error("No user found in the database. Create a user first.")
-  }
-
   const kit = await prisma.questionKit.findUnique({
     where: {
       id: validatedFields.data.kit_id,
+      userId: session.user.id,
     },
     include: {
       questions: {
@@ -101,7 +103,7 @@ export async function createInterview(data: FormData) {
 
   await prisma.interview.create({
     data: {
-      userId: user.id,
+      userId: session.user.id,
       candidateName: validatedFields.data.candidate_name,
       candidateRole: validatedFields.data.candidate_role,
       kitId: kit.id,
@@ -128,7 +130,13 @@ export async function createInterview(data: FormData) {
   redirect("/pages/interviews")
 }
 
-export default function CreateInterviewPage() {
+export default async function CreateInterviewPage() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <InterviewCapture action={createInterview} />

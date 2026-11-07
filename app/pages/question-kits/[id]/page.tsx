@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import {
   kitDetailsInputSchema,
@@ -11,10 +12,11 @@ import type { KitActionState } from "@/components/kits/KitHeaderEditor";
 import type { QuestionActionState } from "@/components/kits/KitQuestionEditor";
 import { minutesToSeconds } from "@/lib/utils";
 
-async function getQuestionKit(id: string) {
+async function getQuestionKit(id: string, userId: string) {
   return prisma.questionKit.findUnique({
     where: {
       id,
+      userId,
     },
     include: {
       questions: {
@@ -29,8 +31,14 @@ async function getQuestionKit(id: string) {
 export default async function QuestionKitDetailsPage({
   params,
 }: PageProps<"/pages/question-kits/[id]">) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const { id } = await params;
-  const questionKit = await getQuestionKit(id);
+  const questionKit = await getQuestionKit(id, session.user.id);
 
   if (!questionKit) {
     notFound();
@@ -41,6 +49,17 @@ export default async function QuestionKitDetailsPage({
     formData: FormData
   ): Promise<KitActionState> {
     "use server";
+
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to update question kits."],
+        },
+      };
+    }
 
     const kitId = formData.get("kit_id")?.toString() ?? "";
 
@@ -68,6 +87,7 @@ export default async function QuestionKitDetailsPage({
     const updatedKit = await prisma.questionKit.updateMany({
       where: {
         id,
+        userId: currentSession.user.id,
       },
       data: {
         title: validatedFields.data.title,
@@ -99,6 +119,17 @@ export default async function QuestionKitDetailsPage({
   ): Promise<KitActionState> {
     "use server";
 
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to delete question kits."],
+        },
+      };
+    }
+
     const kitId = formData.get("kit_id")?.toString() ?? "";
 
     if (kitId !== id) {
@@ -113,6 +144,7 @@ export default async function QuestionKitDetailsPage({
     const deletedKit = await prisma.questionKit.deleteMany({
       where: {
         id,
+        userId: currentSession.user.id,
       },
     });
 
@@ -135,6 +167,17 @@ export default async function QuestionKitDetailsPage({
   ): Promise<QuestionActionState> {
     "use server";
 
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to update questions."],
+        },
+      };
+    }
+
     const questionId = formData.get("question_id")?.toString() ?? "";
     const validatedFields = questionInputSchema.safeParse({
       text: formData.get("text")?.toString() ?? "",
@@ -156,6 +199,9 @@ export default async function QuestionKitDetailsPage({
       where: {
         id: questionId,
         kitId: id,
+        kit: {
+          userId: currentSession.user.id,
+        },
       },
       data: {
         text: validatedFields.data.text,
@@ -187,11 +233,25 @@ export default async function QuestionKitDetailsPage({
   ): Promise<QuestionActionState> {
     "use server";
 
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to delete questions."],
+        },
+      };
+    }
+
     const questionId = formData.get("question_id")?.toString() ?? "";
     const question = await prisma.question.findFirst({
       where: {
         id: questionId,
         kitId: id,
+        kit: {
+          userId: currentSession.user.id,
+        },
       },
       select: {
         id: true,
@@ -211,6 +271,9 @@ export default async function QuestionKitDetailsPage({
     const questionCount = await prisma.question.count({
       where: {
         kitId: id,
+        kit: {
+          userId: currentSession.user.id,
+        },
       },
     });
 

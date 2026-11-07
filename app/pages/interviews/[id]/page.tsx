@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache"
 import { notFound, redirect } from "next/navigation"
 
+import { auth } from "@/auth"
 import { InterviewVerdict } from "@/app/generated/prisma/client"
 import InterviewDetails, {
   type InterviewActionState,
@@ -13,10 +14,11 @@ import {
 import prisma from "@/lib/prisma"
 import { minutesToSeconds } from "@/lib/utils"
 
-async function getInterview(id: string) {
+async function getInterview(id: string, userId: string) {
   return prisma.interview.findUnique({
     where: {
       id,
+      userId,
     },
     include: {
       kit: true,
@@ -42,8 +44,14 @@ function toVerdict(value: "select" | "hold" | "reject") {
 export default async function InterviewDetailsPage({
   params,
 }: PageProps<"/pages/interviews/[id]">) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const { id } = await params
-  const interview = await getInterview(id)
+  const interview = await getInterview(id, session.user.id)
 
   if (!interview) {
     notFound()
@@ -54,6 +62,17 @@ export default async function InterviewDetailsPage({
     formData: FormData
   ): Promise<InterviewActionState> {
     "use server"
+
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to update interviews."],
+        },
+      };
+    }
 
     const interviewId = formData.get("interview_id")?.toString() ?? ""
 
@@ -85,6 +104,7 @@ export default async function InterviewDetailsPage({
     const updatedInterview = await prisma.interview.updateMany({
       where: {
         id,
+        userId: currentSession.user.id,
       },
       data: {
         candidateName: validatedFields.data.candidate_name,
@@ -120,6 +140,17 @@ export default async function InterviewDetailsPage({
   ): Promise<InterviewActionState> {
     "use server"
 
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to delete interviews."],
+        },
+      };
+    }
+
     const interviewId = formData.get("interview_id")?.toString() ?? ""
 
     if (interviewId !== id) {
@@ -134,6 +165,7 @@ export default async function InterviewDetailsPage({
     const deletedInterview = await prisma.interview.deleteMany({
       where: {
         id,
+        userId: currentSession.user.id,
       },
     })
 
@@ -156,6 +188,17 @@ export default async function InterviewDetailsPage({
   ): Promise<InterviewQuestionActionState> {
     "use server"
 
+    const currentSession = await auth();
+
+    if (!currentSession?.user?.id) {
+      return {
+        success: false,
+        errors: {
+          form: ["You must be signed in to update interview feedback."],
+        },
+      };
+    }
+
     const questionId = formData.get("question_id")?.toString() ?? ""
     const validatedFields = interviewQuestionInputSchema.safeParse({
       actual_time_seconds:
@@ -177,6 +220,9 @@ export default async function InterviewDetailsPage({
       where: {
         id: questionId,
         interviewId: id,
+        interview: {
+          userId: currentSession.user.id,
+        },
       },
       data: {
         actualTimeSeconds: validatedFields.data.actual_time_seconds,

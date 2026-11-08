@@ -91,7 +91,7 @@ To enable Google sign-in, create OAuth credentials and set `GOOGLE_CLIENT_ID` an
 | --- | --- |
 | `npm run dev` | Start the development server |
 | `npm run lint` | Run ESLint |
-| `npm run build` | Generate the Prisma client and build the app |
+| `npm run build` | Apply pending migrations, generate the Prisma client, and build the app |
 | `npx prisma migrate dev --name describe_change` | Create and apply a development migration |
 | `npx prisma migrate deploy` | Apply committed migrations |
 | `npx prisma db seed` | Clear and repopulate the database with development sample data |
@@ -99,6 +99,8 @@ To enable Google sign-in, create OAuth credentials and set `GOOGLE_CLIENT_ID` an
 ## Environment variables
 
 See [.env.example](.env.example) for the variable names and sample formats.
+
+Vercel runs `npm run build`, which applies committed Prisma migrations before building. Set `DATABASE_URL` for each Vercel environment to the database that environment should migrate; use a separate database for previews if they should not change production data.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |

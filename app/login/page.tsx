@@ -21,6 +21,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const verificationStatus = searchParams.get("verified");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,7 +61,11 @@ export default function LoginPage() {
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
-            Sign in to access your interview dashboard and question kits.
+            {verificationStatus === "success"
+              ? "Your email is verified. Sign in to access your interview dashboard and question kits."
+              : verificationStatus === "invalid"
+                ? "That verification link is invalid or has expired. Sign up again to receive a new link."
+                : "Sign in to access your interview dashboard and question kits."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,6 +107,9 @@ export default function LoginPage() {
 
             {error ? (
               <p className="text-sm font-medium text-destructive">{error}</p>
+            ) : null}
+            {!error && verificationStatus === "invalid" ? (
+              <p className="text-sm font-medium text-muted-foreground">If your account is still waiting for verification, use the same email on the sign up page to send a fresh link.</p>
             ) : null}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>

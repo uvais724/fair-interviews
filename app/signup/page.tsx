@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 
@@ -18,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -27,6 +25,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,19 +48,7 @@ export default function SignUpPage() {
         return;
       }
 
-      const signInResult = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        router.push("/login");
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
+      setVerificationSent(true);
     } catch {
       setError("Unable to create account right now. Please try again.");
     } finally {
@@ -80,13 +67,26 @@ export default function SignUpPage() {
     <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md border-border/80 bg-card/90 shadow-lg">
         <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Create account</CardTitle>
+          <CardTitle className="text-2xl">{verificationSent ? "Check your email" : "Create account"}</CardTitle>
           <CardDescription>
-            Set up your workspace and start managing interviews and question kits.
+            {verificationSent
+              ? `We sent a verification link to ${formData.email}. Confirm your address before signing in.`
+              : "Set up your workspace and start managing interviews and question kits."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {verificationSent ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">The link is valid for 24 hours. Check your spam folder if it doesn’t arrive.</p>
+              <Link
+                href="/login"
+                className="inline-flex h-8 w-full items-center justify-center rounded-[1rem] bg-[linear-gradient(135deg,#0ea5e9,#22d3ee)] px-2.5 text-sm font-medium text-primary-foreground shadow-[0_12px_22px_rgba(14,165,233,0.22)] transition-all hover:bg-[linear-gradient(135deg,#0ea5e9,#38bdf8)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                Go to sign in
+              </Link>
+              <Button type="button" variant="outline" className="w-full" onClick={() => setVerificationSent(false)}>Use a different email</Button>
+            </div>
+          ) : <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full name</Label>
               <Input
@@ -151,14 +151,14 @@ export default function SignUpPage() {
             >
               Continue with Google
             </Button>
-          </form>
+          </form>}
 
-          <p className="mt-4 text-center text-sm text-muted-foreground">
+          {!verificationSent ? <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
               Sign in
             </Link>
-          </p>
+          </p> : null}
         </CardContent>
       </Card>
     </main>

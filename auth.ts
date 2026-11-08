@@ -55,7 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email },
         });
 
-        if (!user || !user.password) {
+        if (!user || !user.password || !user.emailVerifiedAt) {
           return null;
         }
 
@@ -87,12 +87,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return true;
       }
 
+      if (profile?.email_verified === false) {
+        return false;
+      }
+
       const email = user.email.trim().toLowerCase();
       const existingUser = await prisma.user.findUnique({
         where: { email },
       });
 
       if (existingUser) {
+        if (!existingUser.emailVerifiedAt) {
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { emailVerifiedAt: new Date() },
+          });
+        }
         user.id = existingUser.id;
         return true;
       }
@@ -107,6 +117,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email,
           name: user.name ?? profile?.name ?? email.split("@")[0],
           password: generatedPassword,
+          emailVerifiedAt: new Date(),
         },
       });
 

@@ -4,12 +4,18 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { auth } from "@/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fair Interviews",
-  description: "Interview and question kit management",
+  metadataBase: new URL("https://fairinterviews.org"),
+  title: {
+    default: "Fair Interviews | Structured Interview Management",
+    template: "%s | Fair Interviews",
+  },
+  description:
+    "Plan structured job interviews, build reusable question kits, capture candidate feedback, and make hiring decisions with a consistent process.",
   icons: {
     icon: "/fair-interviews-logo.png",
     shortcut: "/fair-interviews-logo.png",
@@ -32,6 +38,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SiteHeader session={session} />
         <div className="flex-1">{children}</div>
+        <SiteFooter />
         <Analytics />
       </body>
     </html>
